@@ -70,12 +70,13 @@ function NewMerchant({ close, saved, members }:{ close:()=>void; saved:()=>void;
   </form></div>;
 }
 
-function Update({ merchant, close, save }:{ merchant:Merchant; close:()=>void; save:(m:Merchant,s:string,p:number,n:string,paymentMethods:string[],paymentStatuses:Record<string,string>)=>void }) {
+function Update({ merchant, members, close, save }:{ merchant:Merchant; members:Member[]; close:()=>void; save:(m:Merchant,s:string,p:number,n:string,paymentMethods:string[],paymentStatuses:Record<string,string>,picUserId:string)=>void }) {
   const [status, setStatus] = useState(merchant.status);
   const [progress, setProgress] = useState(merchant.progress);
   const [note, setNote] = useState('');
   const [methods, setMethods] = useState<string[]>(merchant.paymentMethods || []);
   const [paymentStatuses, setPaymentStatuses] = useState<Record<string,string>>(merchant.paymentMethodStatuses || {});
+  const [picUserId,setPicUserId]=useState(members.find(member=>member.email===merchant.picEmail)?.id||'');
   const toggleMethod = (method:string) => {
     if (methods.includes(method)) setMethods(methods.filter(value=>value!==method));
     else {
@@ -83,9 +84,10 @@ function Update({ merchant, close, save }:{ merchant:Merchant; close:()=>void; s
       setPaymentStatuses({...paymentStatuses,[method]:paymentStatuses[method] || 'Preparing by merchant'});
     }
   };
-  return <div className="overlay"><form className="modal" onSubmit={event=>{ event.preventDefault(); save(merchant,status,progress,note,methods,paymentStatuses); }}>
+  return <div className="overlay"><form className="modal" onSubmit={event=>{ event.preventDefault(); save(merchant,status,progress,note,methods,paymentStatuses,picUserId); }}>
     <button className="icon close" type="button" onClick={close}><X/></button><p className="eyebrow">PROGRESS UPDATE</p><h2>{merchant.name}</h2>
     <label>Status<select value={status} onChange={event=>setStatus(event.target.value)}>{Object.keys(labels).map(value=><option key={value} value={value}>{labels[value]}</option>)}</select></label>
+    <label>Integration PIC<select required value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="" disabled>Select a member</option>{members.map(member=><option key={member.id} value={member.id}>{member.name} — {member.role}</option>)}</select></label>
     <label>Completion — {progress}%<input type="range" min="0" max="100" step="5" value={progress} onChange={event=>setProgress(+event.target.value)}/></label>
     <fieldset><legend>Payment methods</legend><div className="option-grid">{paymentOptions.map(method=><label className="check-option" key={method}><input type="checkbox" checked={methods.includes(method)} onChange={()=>toggleMethod(method)}/><span>{method}</span></label>)}</div></fieldset>
     {!!methods.length && <fieldset><legend>Payment method status</legend><div className="payment-status-list">{methods.map(method=><label key={method}><span>{method}</span><select value={paymentStatuses[method] || 'Preparing by merchant'} onChange={event=>setPaymentStatuses({...paymentStatuses,[method]:event.target.value})}>{paymentStatusOptions.map(value=><option key={value} value={value}>{value}</option>)}</select></label>)}</div></fieldset>}
@@ -116,8 +118,8 @@ export default function App() {
   useEffect(() => { if (authed) load(); }, [authed]);
   if (!authed) return <Login done={()=>setAuthed(true)}/>;
   const visible = merchants.filter(merchant => (filter === 'ALL' || merchant.status === filter) && (picFilter === 'ALL' || merchant.picEmail === picFilter) && (`${merchant.name} ${merchant.code}`.toLowerCase().includes(search.toLowerCase())));
-  async function update(merchant:Merchant, status:string, progress:number, note:string, paymentMethods:string[], paymentMethodStatuses:Record<string,string>) {
-    await api(`/merchants/${merchant.id}/progress`, { method:'PATCH', body:JSON.stringify({ status, progress, note, paymentMethods, paymentMethodStatuses }) }); setSelected(null); load();
+  async function update(merchant:Merchant, status:string, progress:number, note:string, paymentMethods:string[], paymentMethodStatuses:Record<string,string>,picUserId:string) {
+    await api(`/merchants/${merchant.id}/progress`, { method:'PATCH', body:JSON.stringify({ status, progress, note, paymentMethods, paymentMethodStatuses, picUserId }) }); setSelected(null); load();
   }
   function exportMerchants() {
     downloadCsv('merchant-report', ['Merchant name','Merchant code','Status','PIC name','PIC email','Payment methods','Payment method statuses','Tech stacks','Integration types','Progress (%)','Last update','Target live date','Notes'], visible.map(merchant=>[
@@ -142,5 +144,5 @@ export default function App() {
       <table className="merchant-table"><thead><tr><th>Merchant</th><th>Status</th><th>PIC</th><th>Payment methods</th><th>Progress</th><th>Last update</th><th>Target live</th><th></th></tr></thead><tbody>{visible.map(merchant=><tr key={merchant.id} className={days(merchant.statusUpdatedAt)>=7?'stale':''}><td><div className="merchant-logo">{merchant.name.slice(0,2).toUpperCase()}</div><div><b>{merchant.name}</b><small>{merchant.code}</small></div></td><td><span className={`status ${merchant.status.toLowerCase()}`}>{labels[merchant.status]}</span></td><td><b>{merchant.picName}</b><small>{merchant.picEmail}</small></td><td><div className="method-chips">{merchant.paymentMethods?.length?merchant.paymentMethods.map(method=><span key={method} title={merchant.paymentMethodStatuses?.[method]}>{method}</span>):'—'}</div></td><td><div className="progress"><i style={{width:`${merchant.progress}%`}}/></div><b>{merchant.progress}%</b></td><td><span>{days(merchant.statusUpdatedAt)===0?'Today':`${days(merchant.statusUpdatedAt)} days ago`}</span>{days(merchant.statusUpdatedAt)>=7&&<small className="danger">Update overdue</small>}</td><td>{merchant.targetLiveDate?new Date(merchant.targetLiveDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td><td><button onClick={()=>setSelected(merchant)}>Update <ChevronRight/></button></td></tr>)}</tbody></table>
       {!visible.length&&<div className="empty">No merchants match your filters.</div>}
     </section>
-  </main>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:<AccountPage user={user}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {selected&&<Update merchant={selected} close={()=>setSelected(null)} save={update}/>}</div>;
+  </main>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
 }

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { User } from '../users/user.entity';
@@ -30,13 +30,33 @@ export class MerchantsService {
   async create(dto:CreateMerchantDto) {
     const pic = await this.users.findOneBy({id:dto.picUserId});
     if (!pic) throw new NotFoundException('Selected PIC was not found');
-    const {picUserId,...merchant} = dto;
+    const code = dto.code.trim().toUpperCase();
+    if (await this.merchants.exists({where:{code}})) {
+      throw new ConflictException(`Merchant code "${code}" already exists`);
+    }
     const paymentMethodStatuses = Object.fromEntries(dto.paymentMethods.map(method=>[method,'Preparing by merchant']));
-    return this.merchants.save(this.merchants.create({...merchant,paymentMethodStatuses,picName:pic.name,picEmail:pic.email,code:dto.code.toUpperCase()}));
+    return this.merchants.save(this.merchants.create({
+      name:dto.name.trim(),
+      code,
+      picName:pic.name,
+      picEmail:pic.email,
+      paymentMethods:dto.paymentMethods,
+      paymentMethodStatuses,
+      techStacks:dto.techStacks,
+      integrationTypes:dto.integrationTypes,
+      targetLiveDate:dto.targetLiveDate?.trim() || null,
+      notes:dto.notes?.trim() || null,
+    }));
   }
 
   async updateProgress(id:string, dto:UpdateProgressDto, by:string) {
     const merchant = await this.one(id);
+    if(dto.picUserId){
+      const pic=await this.users.findOneBy({id:dto.picUserId});
+      if(!pic) throw new NotFoundException('Selected PIC was not found');
+      merchant.picName=pic.name;
+      merchant.picEmail=pic.email;
+    }
     merchant.status = dto.status;
     merchant.progress = dto.progress;
     merchant.statusUpdatedAt = new Date();

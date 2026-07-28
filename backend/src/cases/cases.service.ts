@@ -33,7 +33,7 @@ export class CasesService {
     if(!merchant) throw new NotFoundException('Merchant not found');
     const pic=await this.users.findOneBy({id:dto.picUserId});
     if(!pic) throw new NotFoundException('PIC not found');
-    return this.cases.save(this.cases.create({merchant,pic,issue:dto.issue,category:dto.category,response:dto.response||null,updateNote:dto.updateNote||null,acrTicket:dto.acrTicket||null,status:dto.status||CaseStatus.CHECKING,createdBy}));
+    return this.cases.save(this.cases.create({merchant,pic,issue:dto.issue,category:dto.category,response:dto.response||null,updateNote:dto.checkResult||dto.updateNote||null,acrTicket:dto.acrTicket||null,status:dto.status||CaseStatus.CHECKING,createdBy}));
   }
 
   async update(id:string,dto:UpdateCaseDto) {
@@ -45,7 +45,8 @@ export class CasesService {
       record.pic=pic;
     }
     if(dto.response!==undefined) record.response=dto.response||null;
-    if(dto.updateNote!==undefined) record.updateNote=dto.updateNote||null;
+    if(dto.checkResult!==undefined) record.updateNote=dto.checkResult||null;
+    else if(dto.updateNote!==undefined) record.updateNote=dto.updateNote||null;
     if(dto.acrTicket!==undefined) record.acrTicket=dto.acrTicket||null;
     if(dto.status) record.status=dto.status;
     return this.cases.save(record);

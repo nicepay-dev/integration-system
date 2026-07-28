@@ -7,6 +7,7 @@ export class CreateCaseDto {
   @IsEnum(IssueCategory) category:IssueCategory;
   @IsOptional() @IsString() response?:string;
   @IsOptional() @IsString() updateNote?:string;
+  @IsOptional() @IsString() checkResult?:string;
   @IsUUID() picUserId:string;
   @IsOptional() @IsString() acrTicket?:string;
   @IsOptional() @IsEnum(CaseStatus) status?:CaseStatus;
@@ -15,6 +16,7 @@ export class CreateCaseDto {
 export class UpdateCaseDto {
   @IsOptional() @IsString() response?:string;
   @IsOptional() @IsString() updateNote?:string;
+  @IsOptional() @IsString() checkResult?:string;
   @IsOptional() @IsUUID() picUserId?:string;
   @IsOptional() @IsString() acrTicket?:string;
   @IsOptional() @IsEnum(CaseStatus) status?:CaseStatus;
