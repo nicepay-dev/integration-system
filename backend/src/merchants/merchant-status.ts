@@ -1,0 +1,9 @@
+export enum MerchantStatus {
+  ONBOARDING = 'ONBOARDING',
+  INTEGRATION = 'INTEGRATION',
+  UAT = 'UAT',
+  READY_LIVE = 'READY LIVE',
+  LIVE = 'LIVE',
+  BLOCKED = 'BLOCKED',
+  CANCEL = 'CANCEL',
+}

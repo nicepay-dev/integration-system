@@ -1,0 +1,24 @@
+# Dependencies and compiled output
+node_modules/
+dist/
+frontend/tsconfig.tsbuildinfo
+
+# Secrets and local environment configuration
+.env
+**/.env
+!.env.example
+!.env.docker.example
+
+# Private database data and backups
+db/
+*.sql
+*.dump
+*.backup
+postgres-data/
+
+# Logs and editor/OS files
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

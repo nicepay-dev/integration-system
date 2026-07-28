@@ -1,0 +1,2 @@
+import { Module } from '@nestjs/common'; import { TypeOrmModule } from '@nestjs/typeorm'; import { User } from '../users/user.entity'; import { Merchant } from './merchant.entity'; import { ProgressUpdate } from './progress-update.entity'; import { MerchantsController } from './merchants.controller'; import { MerchantsService } from './merchants.service';
+@Module({ imports:[TypeOrmModule.forFeature([Merchant, ProgressUpdate, User])], controllers:[MerchantsController], providers:[MerchantsService], exports:[MerchantsService, TypeOrmModule] }) export class MerchantsModule {}

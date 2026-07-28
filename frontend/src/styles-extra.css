@@ -1,0 +1,72 @@
+.modal {
+  max-height: 92vh;
+  overflow-y: auto;
+}
+.modal fieldset {
+  border: 1px solid #dfe6e4;
+  border-radius: 10px;
+  margin: 16px 0;
+  padding: 12px;
+}
+.modal legend {
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #53635f;
+}
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.option-grid.tech-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.modal label.check-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid #e4e9e8;
+  border-radius: 7px;
+  font-weight: 500;
+}
+.modal label.check-option input {
+  width: auto;
+  margin: 0;
+  accent-color: #315d55;
+}
+.payment-status-list label {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.method-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.method-chips span {
+  background: #eef4f2;
+  color: #3c675e;
+  border-radius: 12px;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 700;
+}
+table td:nth-child(3) {
+  display: table-cell;
+}
+table td:nth-child(4) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.merchant-table td:nth-child(4) { display: table-cell; }
+.merchant-table td:nth-child(5) { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 600px) {
+  .option-grid.tech-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,0 +1,2 @@
+import { Controller, Get, Param, Patch, UseGuards } from '@nestjs/common'; import { AuthGuard } from '@nestjs/passport'; import { NotificationsService } from './notifications.service';
+@UseGuards(AuthGuard('jwt')) @Controller('notifications') export class NotificationsController{constructor(private service:NotificationsService){} @Get() list(){return this.service.list()} @Patch(':id/read') read(@Param('id') id:string){return this.service.read(id)} @Patch('read-all') readAll(){return this.service.readAll()} }
