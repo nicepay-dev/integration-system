@@ -17,8 +17,8 @@ const paymentStatusOptions = ['On development','Preparing by merchant','UAT','Re
 const days = (date:string) => Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
 
 function Login({ done }:{ done:()=>void }) {
-  const [email, setEmail] = useState('alfred.chrisdianto@nicepay.co.id');
-  const [password, setPassword] = useState('alfred123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   async function submit(event:React.FormEvent) {
@@ -31,13 +31,13 @@ function Login({ done }:{ done:()=>void }) {
     } catch (error) { setError((error as Error).message); } finally { setLoading(false); }
   }
   return <main className="login"><section className="login-art">
-    <div className="brand"><i>MP</i><span>Merchant Pulse</span></div>
+    <div className="brand"><i>NI</i><span>Nicepay Integration</span></div>
     <div><p className="eyebrow">INTEGRATION COMMAND CENTER</p><h1>Keep every merchant<br/>moving forward.</h1><p>One clear view of onboarding, integration progress, blockers, and follow-ups.</p></div>
     <div className="quote">“Clarity turns complex integrations into predictable launches.”</div>
-  </section><section className="login-panel"><form onSubmit={submit}>
+  </section><section className="login-panel"><form onSubmit={submit} autoComplete="off">
     <p className="eyebrow">WELCOME BACK</p><h2>Sign in to your workspace</h2><p className="muted">Monitor progress and keep integrations on track.</p>
-    <label>Work email<input type="email" value={email} onChange={event=>setEmail(event.target.value)}/></label>
-    <label>Password<input type="password" value={password} onChange={event=>setPassword(event.target.value)}/></label>
+    <label>Work email<input type="email" value={email} autoComplete="off" onChange={event=>setEmail(event.target.value)}/></label>
+    <label>Password<input type="password" value={password} autoComplete="new-password" onChange={event=>setPassword(event.target.value)}/></label>
     {error && <p className="error">{error}</p>}<button className="primary" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
   </form></section></main>;
 }
@@ -128,7 +128,7 @@ export default function App() {
     ]));
   }
   return <div className="app"><aside>
-    <div className="brand"><i>MP</i><span>Merchant<br/>Pulse</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
+    <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
     <div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.clear();setAuthed(false)}}><LogOut/></button></div>
   </aside>{page==='overview'?<main className="content">
     <header><div><p className="eyebrow">INTEGRATION OVERVIEW</p><h1>Good morning, {user.name?.split(' ')[0]}.</h1><p className="muted">Here’s what needs your attention across merchant integrations.</p></div>
