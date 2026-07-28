@@ -21,7 +21,7 @@ The Docker stack contains three images:
 
 - `merchant-pulse-frontend`: React compiled and served by Nginx
 - `merchant-pulse-backend`: NestJS API
-- `postgres:18-alpine`: empty PostgreSQL database with a persistent volume
+- `postgres:16-alpine`: empty PostgreSQL database with a persistent volume
 
 Copy `.env.docker.example` to `.env`, then replace `JWT_SECRET` with a long
 random value before using the application outside your computer.
