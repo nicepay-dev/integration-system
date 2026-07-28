@@ -13,6 +13,10 @@ services:
       timeout: 5s
       retries: 20
       start_period: 15s
+    networks:
+      internal:
+        aliases:
+          - database
     restart: unless-stopped
 
   backend:
@@ -33,6 +37,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    networks:
+      - internal
     healthcheck:
       test:
         [
@@ -58,8 +64,19 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - internal
+      - cloudflare
     restart: unless-stopped
 
 volumes:
   merchant_data:
     name: merchant_pulse_postgres_data
+
+networks:
+  internal:
+    name: ${INTERNAL_NETWORK:-nicepay_integration_internal}
+    driver: bridge
+  cloudflare:
+    name: ${CLOUDFLARE_NETWORK:-cloudflared}
+    external: true

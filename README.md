@@ -35,6 +35,31 @@ docker compose ps
 
 Open `http://localhost:5173`.
 
+### Cloudflare Tunnel network
+
+The frontend automatically joins the external Docker network configured by
+`CLOUDFLARE_NETWORK` on every deployment. Create this network once and connect
+the existing `cloudflared` container to it:
+
+```powershell
+docker network create cloudflared
+docker network connect cloudflared cloudflared
+```
+
+If the tunnel container has a different name, replace the final `cloudflared`
+with that container name. In Cloudflare Tunnel, set the origin service to:
+
+```text
+http://frontend:80
+```
+
+In Portainer, the same one-time setup can be done under **Networks**: create
+`cloudflared`, then add the Cloudflare Tunnel container to that network.
+
+The application services communicate over the automatically created
+`nicepay_integration_internal` network. PostgreSQL is always available to the
+backend through the fixed DNS alias `database`.
+
 Stop the application without deleting its data:
 
 ```powershell
