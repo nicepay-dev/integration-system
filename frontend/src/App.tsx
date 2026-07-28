@@ -15,6 +15,12 @@ const techOptions = ['JavaScript','TypeScript','Java','PHP','Python','Go','C#','
 const integrationOptions = ['V1','V2','Checkout API','Payment API','SNAP API','Settlement','Transaction History','Payment Link'];
 const paymentStatusOptions = ['On development','Preparing by merchant','UAT','Ready Live','Live'];
 const days = (date:string) => Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
+const greeting = () => {
+  const hour=Number(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',hour12:false,timeZone:'Asia/Jakarta'}).format(new Date()));
+  if(hour<12)return'Good morning';
+  if(hour<18)return'Good afternoon';
+  return'Good evening';
+};
 
 function Login({ done }:{ done:()=>void }) {
   const [email, setEmail] = useState('');
@@ -133,7 +139,7 @@ export default function App() {
     <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
     <div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.clear();setAuthed(false)}}><LogOut/></button></div>
   </aside>{page==='overview'?<main className="content">
-    <header><div><p className="eyebrow">INTEGRATION OVERVIEW</p><h1>Good morning, {user.name?.split(' ')[0]}.</h1><p className="muted">Here’s what needs your attention across merchant integrations.</p></div>
+    <header><div><p className="eyebrow">INTEGRATION OVERVIEW</p><h1>{greeting()}, {user.name?.split(' ')[0]}.</h1><p className="muted">Here’s what needs your attention across merchant integrations.</p></div>
       <div className="header-actions"><button aria-label="Notifications" className="bell icon" onClick={()=>setBell(!bell)}><Bell/><em>{notifications.filter(item=>!item.isRead).length}</em></button><button className="primary" onClick={()=>setModal(true)}><Plus/>Add merchant</button></div>
       {bell&&<div className="notification-pop"><h3>Notifications</h3>{notifications.length?notifications.slice(0,5).map(item=><div className={item.isRead?'':'unread'} key={item.id}><AlertTriangle/><span>{item.message}<small>{new Date(item.createdAt).toLocaleDateString()}</small></span></div>):<p className="muted">You’re all caught up.</p>}</div>}
     </header>

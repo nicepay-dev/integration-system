@@ -26,8 +26,9 @@ export class UsersController {
 
   @Post()
   async create(@Body() dto:CreateUserDto,@Req() request:any) {
-    if (!String(request.user?.role || '').toLowerCase().includes('lead')) {
-      throw new ForbiddenException('Only an integration lead can register users');
+    const requesterRole=String(request.user?.role || '').toLowerCase();
+    if (!requesterRole.includes('lead') && requesterRole !== 'head section') {
+      throw new ForbiddenException('Only an integration lead or head section can register users');
     }
     const email=dto.email.trim().toLowerCase();
     if(await this.users.exists({where:{email}})) throw new ConflictException('Email is already registered');

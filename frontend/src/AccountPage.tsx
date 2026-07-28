@@ -15,7 +15,8 @@ export default function AccountPage({user,onUserCreated}:{user:AccountUser;onUse
   const [memberError,setMemberError]=useState('');
   const [memberSuccess,setMemberSuccess]=useState('');
   const [memberBusy,setMemberBusy]=useState(false);
-  const canRegister=user.role?.toLowerCase().includes('lead');
+  const normalizedRole=user.role?.toLowerCase();
+  const canRegister=normalizedRole?.includes('lead')||normalizedRole==='head section';
 
   async function updatePassword(event:React.FormEvent){
     event.preventDefault();setPasswordError('');setPasswordSuccess('');
@@ -50,7 +51,7 @@ export default function AccountPage({user,onUserCreated}:{user:AccountUser;onUse
       </form>
       {canRegister&&<form className="register-card" onSubmit={registerMember}><div className="password-title"><UserPlus/><div><h2>Register user</h2><p className="muted">Add a member to the integration team.</p></div></div>
         <div className="grid2"><label>Full name<input required minLength={2} value={member.name} onChange={event=>setMember({...member,name:event.target.value})}/></label><label>Work email<input required type="email" value={member.email} onChange={event=>setMember({...member,email:event.target.value})}/></label></div>
-        <div className="grid2"><label>Role<select value={member.role} onChange={event=>setMember({...member,role:event.target.value})}><option value="staff integrasi">Staff integrasi</option><option value="lead integrasi">Lead integrasi</option></select></label><label>Initial password<input required type="password" minLength={8} autoComplete="new-password" value={member.password} onChange={event=>setMember({...member,password:event.target.value})}/></label></div>
+        <div className="grid2"><label>Role<select value={member.role} onChange={event=>setMember({...member,role:event.target.value})}><option value="staff integrasi">Staff integrasi</option><option value="lead integrasi">Lead integrasi</option><option value="head section">Head section</option></select></label><label>Initial password<input required type="password" minLength={8} autoComplete="new-password" value={member.password} onChange={event=>setMember({...member,password:event.target.value})}/></label></div>
         {memberError&&<p className="error">{memberError}</p>}{memberSuccess&&<p className="success"><CheckCircle2/>{memberSuccess}</p>}
         <button className="primary" disabled={memberBusy}><UserPlus/>{memberBusy?'Registering…':'Register user'}</button>
       </form>}
