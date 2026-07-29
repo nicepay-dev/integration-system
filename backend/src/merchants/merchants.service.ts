@@ -90,11 +90,12 @@ export class MerchantsService {
 
   async update(id:string,dto:UpdateMerchantDto) {
     let merchant=await this.oneEntity(id);
+    const changes:Partial<Merchant>={};
     if(dto.picUserId){
       const pic=await this.users.findOneBy({id:dto.picUserId});
       if(!pic)throw new NotFoundException('Selected PIC was not found');
-      merchant.picName=pic.name;
-      merchant.picEmail=pic.email;
+      changes.picName=pic.name;
+      changes.picEmail=pic.email;
     }
     if(dto.mids!==undefined||dto.code!==undefined||dto.paymentMethods!==undefined){
       const mids=this.normalizeMids(dto.mids,dto.code??merchant.code,dto.paymentMethods,this.currentMids(merchant),merchant.status);
@@ -102,16 +103,15 @@ export class MerchantsService {
       const duplicate=await this.merchants.findOneBy({code});
       if(duplicate&&duplicate.id!==id)throw new ConflictException(`Merchant MID combination "${code}" already exists`);
       await this.ensureMidsAvailable(mids,id);
-      merchant.code=code;
-      await this.merchants.save(merchant);
+      changes.code=code;
       await this.syncMids(merchant,mids);
     }
-    if(dto.name!==undefined)merchant.name=dto.name.trim();
-    if(dto.techStacks!==undefined)merchant.techStacks=dto.techStacks;
-    if(dto.integrationTypes!==undefined)merchant.integrationTypes=dto.integrationTypes;
-    if(dto.targetLiveDate!==undefined)merchant.targetLiveDate=dto.targetLiveDate.trim()||null;
-    if(dto.notes!==undefined)merchant.notes=dto.notes.trim()||null;
-    await this.merchants.save(merchant);
+    if(dto.name!==undefined)changes.name=dto.name.trim();
+    if(dto.techStacks!==undefined)changes.techStacks=dto.techStacks;
+    if(dto.integrationTypes!==undefined)changes.integrationTypes=dto.integrationTypes;
+    if(dto.targetLiveDate!==undefined)changes.targetLiveDate=dto.targetLiveDate.trim()||null;
+    if(dto.notes!==undefined)changes.notes=dto.notes.trim()||null;
+    if(Object.keys(changes).length)await this.merchants.update(id,changes);
     merchant=await this.oneEntity(id);
     return this.toResponse(merchant);
   }

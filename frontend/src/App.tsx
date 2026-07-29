@@ -115,6 +115,8 @@ function Update({ merchant, members, close, save }:{ merchant:Merchant; members:
     item.mid,Object.fromEntries(item.paymentMethods.map(method=>[method,item.paymentMethodStatuses?.[method]||merchant.paymentMethodStatuses?.[method]||'Preparing by merchant'])),
   ])));
   const [picUserId,setPicUserId]=useState(members.find(member=>member.email===merchant.picEmail)?.id||'');
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState('');
   const overallStatuses=()=>{
     const order=['Preparing by merchant','On development','UAT','Ready Live','Live'];
     return Object.fromEntries((merchant.paymentMethods||[]).map(method=>{
@@ -123,7 +125,7 @@ function Update({ merchant, members, close, save }:{ merchant:Merchant; members:
     }));
   };
   const setMidStatus=(mid:string,method:string,value:string)=>setMidPaymentStatuses({...midPaymentStatuses,[mid]:{...midPaymentStatuses[mid],[method]:value}});
-  return <div className="overlay"><form className="modal" onSubmit={event=>{ event.preventDefault(); save(merchant,status,progress,note,overallStatuses(),midStatuses,midPaymentStatuses,picUserId); }}>
+  return <div className="overlay"><form className="modal" onSubmit={async event=>{ event.preventDefault(); setBusy(true); setError(''); try{await save(merchant,status,progress,note,overallStatuses(),midStatuses,midPaymentStatuses,picUserId);}catch(error){setError((error as Error).message);setBusy(false);} }}>
     <button className="icon close" type="button" onClick={close}><X/></button><p className="eyebrow">PROGRESS UPDATE</p><h2>{merchant.name}</h2>
     <label>Status<select value={status} onChange={event=>setStatus(event.target.value)}>{Object.keys(labels).map(value=><option key={value} value={value}>{labels[value]}</option>)}</select></label>
     <label>Integration PIC<select required value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="" disabled>Select a member</option>{members.map(member=><option key={member.id} value={member.id}>{member.name} — {member.role}</option>)}</select></label>
@@ -131,7 +133,7 @@ function Update({ merchant, members, close, save }:{ merchant:Merchant; members:
     <p className="field-help">Add or remove MIDs and their payment methods from the Edit merchant action.</p>
     {!!progressMids.length&&<div className="mid-progress-list">{progressMids.map(item=><fieldset key={item.mid}><legend>{item.mid}</legend><label>MID status<select value={midStatuses[item.mid]||merchant.status} onChange={event=>setMidStatuses({...midStatuses,[item.mid]:event.target.value})}>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>{item.paymentMethods.length?<div className="payment-status-list">{item.paymentMethods.map(method=><label key={method}><span>{method}</span><select value={midPaymentStatuses[item.mid]?.[method]||'Preparing by merchant'} onChange={event=>setMidStatus(item.mid,method,event.target.value)}>{paymentStatusOptions.map(value=><option key={value} value={value}>{value}</option>)}</select></label>)}</div>:<p className="field-help">No payment methods assigned to this MID.</p>}</fieldset>)}</div>}
     <label>Update note<textarea rows={4} value={note} onChange={event=>setNote(event.target.value)} placeholder="What changed? Any blockers?"/></label>
-    <div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary">Save update</button></div>
+    {error&&<p className="error">{error}</p>}<div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary" disabled={busy}>{busy?'Saving…':'Save update'}</button></div>
   </form></div>;
 }
 

@@ -60,6 +60,13 @@ The application services communicate over the automatically created
 `nicepay_integration_internal` network. PostgreSQL is always available to the
 backend through the fixed DNS alias `database`.
 
+If the backend reports `getaddrinfo ENOTFOUND database`, redeploy the complete
+stack rather than only the backend service. In Portainer, confirm that both the
+backend and database containers are connected to
+`nicepay_integration_internal`. When PostgreSQL is managed in another stack,
+connect that container to the same network and set `DB_HOST` to its network
+alias in the stack environment.
+
 Stop the application without deleting its data:
 
 ```powershell
@@ -96,11 +103,13 @@ Remove containers and the database volume:
 docker compose down -v
 ```
 
-PostgreSQL starts without private application records. NestJS creates the
-required tables on startup, and all later changes are stored in the permanent
-`merchant_pulse_postgres_data` volume. The volume survives container
-replacement, image rebuilding, `docker compose down`, and Compose project-name
-changes.
+PostgreSQL starts without private application records. Apply the private
+structure and data scripts manually when initializing a new server.
+`DB_SYNCHRONIZE` defaults to `false` in production so NestJS does not
+automatically alter protected database tables. All later changes are stored in
+the permanent `merchant_pulse_postgres_data` volume. The volume survives
+container replacement, image rebuilding, `docker compose down`, and Compose
+project-name changes.
 
 Do not run `docker compose down -v` unless you intentionally want to delete
 the live Docker database. SQL dumps, backups, `.env` files, and the `db`
