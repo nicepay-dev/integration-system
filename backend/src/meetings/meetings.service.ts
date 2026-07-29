@@ -44,7 +44,7 @@ export class MeetingsService {
     return this.meetings.save(this.meetings.create({
       merchant,merchantName,pic,meetingDate:new Date(dto.meetingDate),meetingType:dto.meetingType,
       attendees:dto.attendees?.trim()||null,location:dto.location?.trim()||null,
-      agenda:dto.agenda?.trim()||null,mom:dto.mom.trim(),
+      agenda:dto.agenda?.trim()||null,mom:dto.mom?.trim()||'',
       actionItems:dto.actionItems?.trim()||null,nextFollowUpDate:dto.nextFollowUpDate?.trim()||null,createdBy,
     }));
   }

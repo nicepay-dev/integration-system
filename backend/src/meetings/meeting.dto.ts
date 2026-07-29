@@ -10,7 +10,7 @@ export class CreateMeetingDto {
   @IsOptional() @IsString() attendees?:string;
   @IsOptional() @IsString() location?:string;
   @IsOptional() @IsString() agenda?:string;
-  @IsString() mom:string;
+  @IsOptional() @IsString() mom?:string;
   @IsOptional() @IsString() actionItems?:string;
   @IsOptional() @IsString() nextFollowUpDate?:string;
 }
