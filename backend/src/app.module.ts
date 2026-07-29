@@ -7,6 +7,7 @@ import { MerchantsModule } from './merchants/merchants.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { UsersModule } from './users/users.module';
 import { CasesModule } from './cases/cases.module';
+import { MeetingsModule } from './meetings/meetings.module';
 import { HealthController } from './health.controller';
 import { RequestLoggerMiddleware } from './request-logger.middleware';
 
@@ -38,6 +39,7 @@ import { RequestLoggerMiddleware } from './request-logger.middleware';
     UsersModule,
     MerchantsModule,
     CasesModule,
+    MeetingsModule,
     NotificationsModule,
   ],
   controllers: [HealthController],

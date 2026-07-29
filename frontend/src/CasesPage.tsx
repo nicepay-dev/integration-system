@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Bell, ChevronRight, ClipboardCheck, Download, Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, Bell, ChevronRight, ClipboardCheck, Download, Plus, Search, Trash2, X } from 'lucide-react';
 import { api } from './api';
 import { downloadCsv } from './exportCsv';
 
@@ -70,13 +70,31 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
       new Date(item.createdAt).toLocaleString('en-GB'),new Date(item.updatedAt).toLocaleString('en-GB')
     ]));
   }
+  async function deleteCase(item:CaseItem){
+    if(!window.confirm(`Delete the case for ${item.merchant.name}?`))return;
+    await api(`/cases/${item.id}`,{method:'DELETE'});
+    await load();
+  }
   return <main className="content cases-page">
     <header><div><p className="eyebrow">ISSUE OPERATIONS</p><h1>Case checking</h1><p className="muted">Track merchant issues, ownership, responses, and resolution.</p></div><div className="header-actions"><button aria-label="Case notifications" className="bell icon" onClick={()=>setBell(!bell)}><Bell/><em>{notifications.filter(item=>!item.isRead).length}</em></button><button className="primary" onClick={()=>setCreating(true)}><Plus/>Add case</button></div>{bell&&<div className="notification-pop"><h3>Case notifications</h3>{notifications.length?notifications.slice(0,8).map(item=><div className={item.isRead?'':'unread'} key={item.id}><AlertTriangle/><span>{item.message}<small>{new Date(item.createdAt).toLocaleDateString()}</small></span></div>):<p className="muted">No overdue case notifications.</p>}</div>}</header>
     {overdue>0&&<section className="attention"><div className="attention-icon"><AlertTriangle/></div><div><b>{overdue} cases need an update</b><p>These cases have been open without an update for two days or more.</p></div></section>}
     <section className="stats case-stats"><article><span>Total cases</span><b>{cases.length}</b><small>Current filtered view</small></article><article><span>Open cases</span><b>{open}</b><small>Still needs follow-up</small></article><article><span>Solved</span><b>{cases.filter(item=>item.status==='SOLVED').length}</b><small>Resolved cases</small></article></section>
     <section className="table-card">
       <div className="table-head case-filters"><div><h2>Issue register</h2><p className="muted">Filter by merchant, status, or last-updated date.</p></div><div className="tools"><div className="search"><Search/><input placeholder="Search issue or ACR" value={search} onChange={event=>setSearch(event.target.value)} onKeyDown={event=>event.key==='Enter'&&load()}/></div><div className="merchant-filter"><input placeholder="Filter merchant list" value={merchantFilter} onChange={event=>setMerchantFilter(event.target.value)}/><select value={merchantId} onChange={event=>setMerchantId(event.target.value)}><option value="ALL">All merchants</option>{filteredMerchants.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></div><select value={status} onChange={event=>setStatus(event.target.value)}><option value="ALL">All statuses</option>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><label className="date-filter">From<input type="date" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label><label className="date-filter">To<input type="date" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label><button className="filter-button" onClick={load}>Apply</button><button className="export-button" onClick={exportCases} disabled={!cases.length}><Download/>Export ({cases.length})</button></div></div>
-      <table className="case-table"><thead><tr><th>Merchant / issue</th><th>Check result</th><th>Category</th><th>PIC</th><th>ACR ticket</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>{cases.map(item=><tr key={item.id}><td><div><b>{item.merchant.name}</b><small>{item.issue}</small>{item.response&&<small className="case-response">Response: {item.response}</small>}</div></td><td><span className="case-update">{item.updateNote||'No check result yet'}</span></td><td>{categories[item.category]}</td><td>{item.pic.name}</td><td>{item.acrTicket||'—'}</td><td><span className={`case-status ${item.status.toLowerCase()}`}>{statuses[item.status]}</span></td><td>{new Date(item.updatedAt).toLocaleDateString('en-GB')}</td><td><button onClick={()=>setEditing(item)}>Update <ChevronRight/></button></td></tr>)}</tbody></table>
+      <table className="case-table">
+        <thead><tr><th>Merchant name</th><th>Category</th><th>Check result</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
+        <tbody>{cases.map(item=><tr key={item.id}>
+          <td><b>{item.merchant.name}</b></td>
+          <td>{categories[item.category]}</td>
+          <td><span className="case-update">{item.updateNote||'No check result yet'}</span></td>
+          <td><span className="case-response">{item.response||'No response yet'}</span></td>
+          <td>{item.pic.name}</td>
+          <td>{new Date(item.createdAt).toLocaleDateString('en-GB')}</td>
+          <td>{new Date(item.updatedAt).toLocaleDateString('en-GB')}</td>
+          <td><span className={`case-status ${item.status.toLowerCase()}`}>{statuses[item.status]}</span></td>
+          <td><div className="row-actions"><button onClick={()=>setEditing(item)}>Update <ChevronRight/></button><button className="delete-action" title="Delete case" onClick={()=>deleteCase(item)}><Trash2/></button></div></td>
+        </tr>)}</tbody>
+      </table>
       {!cases.length&&<div className="empty"><ClipboardCheck/><p>No cases match the current filters.</p></div>}
     </section>
     {creating&&<CaseModal merchants={merchants} members={members} close={()=>setCreating(false)} saved={load}/>}

@@ -15,6 +15,7 @@ db/
 *.dump
 *.backup
 postgres-data/
+.spreadsheet-work/
 
 # Logs and editor/OS files
 *.log

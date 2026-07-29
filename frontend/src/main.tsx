@@ -6,6 +6,7 @@ import './styles-extra.css';
 import './cases.css';
 import './dashboard.css';
 import './case-filters.css';
+import './meetings.css';
 import './account.css';
 import './theme-light-blue.css';
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);

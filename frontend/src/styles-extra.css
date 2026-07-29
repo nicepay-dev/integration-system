@@ -57,6 +57,60 @@
   font-size: 10px;
   font-weight: 700;
 }
+.mid-method-list {
+  display: grid;
+  gap: 8px;
+  min-width: 230px;
+}
+.mid-method-row {
+  border: 1px solid #dbe8ef;
+  border-radius: 8px;
+  padding: 8px;
+  background: #f8fcff;
+}
+.mid-method-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.mid-method-heading > b {
+  color: #245b7d;
+  font-size: 11px;
+  word-break: break-word;
+}
+.mid-status {
+  flex: 0 0 auto;
+  border-radius: 12px;
+  padding: 3px 6px;
+  background: #e5f1f8;
+  color: #397493;
+  font-size: 9px;
+  font-weight: 800;
+}
+.mid-status.live { background: #ddf3df; color: #38743d; }
+.mid-status.blocked,.mid-status.cancel { background: #fde5de; color: #b35437; }
+.mid-method-row .method-chips span {
+  display: grid;
+  gap: 2px;
+  border-radius: 7px;
+  padding: 5px 7px;
+}
+.mid-method-row .method-chips span b {
+  font-size: 10px;
+}
+.mid-method-row .method-chips span small {
+  margin: 0;
+  color: #66859a;
+  font-size: 8px;
+  font-weight: 600;
+}
+.mid-method-row .method-chips em {
+  color: #8a989f;
+  font-size: 10px;
+  font-style: normal;
+}
 table td:nth-child(3) {
   display: table-cell;
 }
@@ -70,3 +124,6 @@ table td:nth-child(4) {
 @media (max-width: 600px) {
   .option-grid.tech-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+.field-help{color:#738581;font-size:12px;line-height:1.5;margin:4px 0 12px}
+.mid-progress-list{display:grid;gap:2px}.mid-progress-list fieldset{background:#f8fcff}.mid-progress-list legend{color:#2e7198}
+.mid-list{display:grid;gap:12px}.mid-card{border:1px solid #dbe8ef;background:#f8fcff;border-radius:10px;padding:12px}.mid-heading{display:flex;align-items:flex-end;gap:10px;margin-bottom:10px}.mid-heading label{flex:1;margin:0}.remove-mid,.add-mid{border:1px solid #c8ddea;background:#fff;color:#34769e;border-radius:8px;padding:9px 12px;display:flex;align-items:center;gap:6px;font-weight:700}.remove-mid{color:#b94e55;border-color:#f0cfd1}.remove-mid svg,.add-mid svg{width:15px}.add-mid{margin-top:12px}

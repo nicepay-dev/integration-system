@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { MerchantMid } from './merchant-mid.entity';
 import { ProgressUpdate } from './progress-update.entity';
 import { MerchantStatus } from './merchant-status';
 export { MerchantStatus } from './merchant-status';
@@ -13,8 +14,7 @@ export class Merchant {
   @Column({type:'varchar',nullable:true}) salesPic:string|null;
   @Column() picName:string;
   @Column() picEmail:string;
-  @Column({type:'jsonb',default:()=>"'[]'"}) paymentMethods:string[];
-  @Column({type:'jsonb',default:()=>"'{}'"}) paymentMethodStatuses:Record<string,string>;
+  @OneToMany(()=>MerchantMid,mid=>mid.merchant,{cascade:true}) mids:MerchantMid[];
   @Column({type:'jsonb',default:()=>"'[]'"}) techStacks:string[];
   @Column({type:'jsonb',default:()=>"'[]'"}) integrationTypes:string[];
   @Column({type:'enum',enum:MerchantStatus,default:MerchantStatus.ONBOARDING}) status:MerchantStatus;

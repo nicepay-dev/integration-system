@@ -51,4 +51,11 @@ export class CasesService {
     if(dto.status) record.status=dto.status;
     return this.cases.save(record);
   }
+
+  async remove(id:string){
+    const record=await this.cases.findOne({where:{id},relations:{merchant:true}});
+    if(!record)throw new NotFoundException('Case not found');
+    await this.cases.remove(record);
+    return{ok:true,message:`Case for ${record.merchant.name} was deleted`};
+  }
 }
