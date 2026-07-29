@@ -28,11 +28,13 @@ export class CasesService {
     return query.getMany();
   }
 
-  async create(dto:CreateCaseDto, createdBy:string) {
-    const merchant=await this.merchants.findOneBy({id:dto.merchantId});
+  async create(dto:CreateCaseDto, loggedInUserId:string, createdBy:string) {
+    const [merchant,pic]=await Promise.all([
+      this.merchants.findOneBy({id:dto.merchantId}),
+      this.users.findOneBy({id:loggedInUserId}),
+    ]);
     if(!merchant) throw new NotFoundException('Merchant not found');
-    const pic=await this.users.findOneBy({id:dto.picUserId});
-    if(!pic) throw new NotFoundException('PIC not found');
+    if(!pic) throw new NotFoundException('Logged-in user was not found');
     return this.cases.save(this.cases.create({merchant,pic,issue:dto.issue,category:dto.category,response:dto.response||null,updateNote:dto.checkResult||dto.updateNote||null,acrTicket:dto.acrTicket||null,status:dto.status||CaseStatus.CHECKING,createdBy}));
   }
 

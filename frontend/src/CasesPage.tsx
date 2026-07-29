@@ -10,6 +10,7 @@ const statuses:Record<string,string>={CHECKING:'Checking',WAITING_PARTNER:'Waiti
 const categories:Record<string,string>={PAYMENT:'Payment',INTEGRATION_API:'Integration / API',SETTLEMENT_RECONCILIATION:'Settlement / Reconciliation',DASHBOARD_ACCESS:'Dashboard / Access',CONFIGURATION:'Configuration',OTHER:'Other'};
 
 function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[];members:Member[];existing?:CaseItem|null;close:()=>void;saved:()=>void}) {
+  const loggedInUser=JSON.parse(localStorage.getItem('mp_user')||'{"name":"Current user","email":""}');
   const [merchantQuery,setMerchantQuery]=useState(existing?.merchant.name||'');
   const [form,setForm]=useState({merchantId:existing?.merchant.id||'',issue:existing?.issue||'',category:existing?.category||'PAYMENT',response:existing?.response||'',updateNote:existing?.updateNote||'',picUserId:existing?.pic.id||members[0]?.id||'',acrTicket:existing?.acrTicket||'',status:existing?.status||'CHECKING'});
   const [error,setError]=useState('');
@@ -20,7 +21,7 @@ function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[
     event.preventDefault();setBusy(true);setError('');
     try{
       if(existing) await api(`/cases/${existing.id}`,{method:'PATCH',body:JSON.stringify({response:form.response,checkResult:form.updateNote,picUserId:form.picUserId,acrTicket:form.acrTicket,status:form.status})});
-      else await api('/cases',{method:'POST',body:JSON.stringify({...form,checkResult:form.updateNote,updateNote:undefined})});
+      else await api('/cases',{method:'POST',body:JSON.stringify({merchantId:form.merchantId,issue:form.issue,category:form.category,response:form.response,checkResult:form.updateNote,acrTicket:form.acrTicket,status:form.status})});
       saved();close();
     }catch(error){setError((error as Error).message);setBusy(false);}
   }
@@ -30,7 +31,7 @@ function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[
     {existing&&<div className="issue-summary"><b>{categories[existing.category]}</b><p>{existing.issue}</p></div>}
     <label>Check result<textarea rows={3} value={form.updateNote} onChange={event=>set('updateNote',event.target.value)} placeholder="Result of the latest investigation or checking"/></label>
     <label>Response<textarea rows={4} value={form.response} onChange={event=>set('response',event.target.value)} placeholder="Latest response or action taken"/></label>
-    <label>PIC<select required value={form.picUserId} onChange={event=>set('picUserId',event.target.value)}>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>
+    {existing?<label>PIC<select required value={form.picUserId} onChange={event=>set('picUserId',event.target.value)}>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>:<label>PIC<input value={loggedInUser.name} readOnly/><small>Automatically assigned from the signed-in user.</small></label>}
     <div className="grid2"><label>ACR ticket (optional)<input value={form.acrTicket} onChange={event=>set('acrTicket',event.target.value)} placeholder="e.g. ACR-12345"/></label><label>Status<select value={form.status} onChange={event=>set('status',event.target.value)}>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label></div>
     {error&&<p className="error">{error}</p>}<div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary" disabled={busy||(!existing&&!form.merchantId)}>{existing?'Save changes':'Create case'}</button></div>
   </form></div>;
