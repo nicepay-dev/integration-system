@@ -24,6 +24,8 @@ export class CaseRecord {
   @ManyToOne(()=>Merchant,{eager:true,onDelete:'CASCADE'}) merchant:Merchant;
   @Column({type:'text'}) issue:string;
   @Column({type:'enum',enum:IssueCategory}) category:IssueCategory;
+  @Column({type:'varchar',nullable:true}) paymentMethod:string|null;
+  @Column({type:'varchar',nullable:true}) paymentArea:string|null;
   @Column({type:'text',nullable:true}) response:string|null;
   @Column({type:'text',nullable:true}) updateNote:string|null;
   @ManyToOne(()=>User,{eager:true,onDelete:'RESTRICT'}) pic:User;

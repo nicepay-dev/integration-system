@@ -5,7 +5,10 @@ export class CreateCaseDto {
   @IsUUID() merchantId:string;
   @IsString() issue:string;
   @IsEnum(IssueCategory) category:IssueCategory;
+  @IsOptional() @IsString() paymentMethod?:string;
+  @IsOptional() @IsString() paymentArea?:string;
   @IsOptional() @IsString() response?:string;
+  @IsOptional() @IsString() action?:string;
   @IsOptional() @IsString() updateNote?:string;
   @IsOptional() @IsString() checkResult?:string;
   @IsOptional() @IsString() acrTicket?:string;
@@ -14,6 +17,7 @@ export class CreateCaseDto {
 
 export class UpdateCaseDto {
   @IsOptional() @IsString() response?:string;
+  @IsOptional() @IsString() action?:string;
   @IsOptional() @IsString() updateNote?:string;
   @IsOptional() @IsString() checkResult?:string;
   @IsOptional() @IsUUID() picUserId?:string;

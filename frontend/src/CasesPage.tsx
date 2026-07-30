@@ -5,31 +5,45 @@ import { downloadCsv } from './exportCsv';
 
 type Merchant={id:string;name:string;code:string};
 type Member={id:string;name:string;email:string;role:string};
-type CaseItem={id:string;merchant:Merchant;issue:string;category:string;response?:string;updateNote?:string;pic:Member;acrTicket?:string;status:string;createdBy:string;createdAt:string;updatedAt:string};
+type CaseItem={id:string;merchant:Merchant;issue:string;category:string;paymentMethod?:string;paymentArea?:string;response?:string;updateNote?:string;pic:Member;acrTicket?:string;status:string;createdBy:string;createdAt:string;updatedAt:string};
 const statuses:Record<string,string>={CHECKING:'Checking',WAITING_PARTNER:'Waiting from partner',WAITING_MERCHANT:'Waiting from merchant',SOLVED:'Solved'};
 const categories:Record<string,string>={PAYMENT:'Payment',INTEGRATION_API:'Integration / API',SETTLEMENT_RECONCILIATION:'Settlement / Reconciliation',DASHBOARD_ACCESS:'Dashboard / Access',CONFIGURATION:'Configuration',OTHER:'Other'};
+const paymentMethods:Record<string,string>={CREDIT_CARD:'Credit Card',VA:'VA',CVS:'CVS',DIRECT_DEBIT:'Direct Debit',EWALLET:'eWallet',PAYLOAN:'Payloan',PAYOUT:'Payout',QRIS:'QRIS'};
+const area=(...entries:[string,string][])=>entries.map(([value,label])=>({value,label}));
+const paymentAreas:Record<string,{value:string;label:string}[]>={
+  CREDIT_CARD:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['THREE_DS','3DS'],['PAYMENT','Payment'],['REFUND','Refund'],['FDS','FDS'],['CREDENTIAL','Credential']),
+  VA:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['CREDENTIAL','Credential']),
+  CVS:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['CREDENTIAL','Credential']),
+  DIRECT_DEBIT:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['CREDENTIAL','Credential']),
+  EWALLET:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['ACCOUNT_BINDING','Account binding'],['CREDENTIAL','Credential']),
+  PAYLOAN:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['CREDENTIAL','Credential']),
+  PAYOUT:area(['REGISTER','Register'],['APPROVE','Approve'],['DANA_TRANSFER','Dana transfer'],['CHECK_STATUS','Check status'],['BALANCE','Balance'],['CREDENTIAL','Credential']),
+  QRIS:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['CREDENTIAL','Credential']),
+};
 
 function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[];members:Member[];existing?:CaseItem|null;close:()=>void;saved:()=>void}) {
   const loggedInUser=JSON.parse(localStorage.getItem('mp_user')||'{"name":"Current user","email":""}');
   const [merchantQuery,setMerchantQuery]=useState(existing?.merchant.name||'');
-  const [form,setForm]=useState({merchantId:existing?.merchant.id||'',issue:existing?.issue||'',category:existing?.category||'PAYMENT',response:existing?.response||'',updateNote:existing?.updateNote||'',picUserId:existing?.pic.id||members[0]?.id||'',acrTicket:existing?.acrTicket||'',status:existing?.status||'CHECKING'});
+  const [form,setForm]=useState({merchantId:existing?.merchant.id||'',issue:existing?.issue||'',category:existing?.category||'PAYMENT',paymentMethod:existing?.paymentMethod||'CREDIT_CARD',paymentArea:existing?.paymentArea||'REGISTER',response:existing?.response||'',updateNote:existing?.updateNote||'',picUserId:existing?.pic.id||members[0]?.id||'',acrTicket:existing?.acrTicket||'',status:existing?.status||'CHECKING'});
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
   const filtered=useMemo(()=>merchants.filter(item=>`${item.name} ${item.code}`.toLowerCase().includes(merchantQuery.toLowerCase())).slice(0,80),[merchants,merchantQuery]);
   const set=(key:string,value:string)=>setForm({...form,[key]:value});
+  const setCategory=(value:string)=>setForm({...form,category:value,paymentMethod:value==='PAYMENT'?(form.paymentMethod||'CREDIT_CARD'):'',paymentArea:value==='PAYMENT'?(form.paymentArea||'REGISTER'):''});
+  const setPaymentMethod=(value:string)=>setForm({...form,paymentMethod:value,paymentArea:paymentAreas[value][0].value});
   async function submit(event:React.FormEvent){
     event.preventDefault();setBusy(true);setError('');
     try{
-      if(existing) await api(`/cases/${existing.id}`,{method:'PATCH',body:JSON.stringify({response:form.response,checkResult:form.updateNote,picUserId:form.picUserId,acrTicket:form.acrTicket,status:form.status})});
-      else await api('/cases',{method:'POST',body:JSON.stringify({merchantId:form.merchantId,issue:form.issue,category:form.category,response:form.response,checkResult:form.updateNote,acrTicket:form.acrTicket,status:form.status})});
+      if(existing) await api(`/cases/${existing.id}`,{method:'PATCH',body:JSON.stringify({response:form.response,action:form.updateNote,picUserId:form.picUserId,acrTicket:form.acrTicket,status:form.status})});
+      else await api('/cases',{method:'POST',body:JSON.stringify({merchantId:form.merchantId,issue:form.issue,category:form.category,paymentMethod:form.category==='PAYMENT'?form.paymentMethod:undefined,paymentArea:form.category==='PAYMENT'?form.paymentArea:undefined,response:form.response,action:form.updateNote,acrTicket:form.acrTicket,status:form.status})});
       saved();close();
     }catch(error){setError((error as Error).message);setBusy(false);}
   }
   return <div className="overlay"><form className="modal case-modal" onSubmit={submit}>
     <button className="icon close" type="button" onClick={close}><X/></button><p className="eyebrow">{existing?'UPDATE CASE':'NEW CASE'}</p><h2>{existing?existing.merchant.name:'Record merchant issue'}</h2>
-    {!existing&&<><label>Find merchant<input placeholder="Type merchant name or code" value={merchantQuery} onChange={event=>setMerchantQuery(event.target.value)}/></label><label>Merchant<select required value={form.merchantId} onChange={event=>set('merchantId',event.target.value)}><option value="">Select merchant</option>{filtered.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name} — {merchant.code}</option>)}</select></label><label>Issue<textarea required rows={4} value={form.issue} onChange={event=>set('issue',event.target.value)} placeholder="Describe what happened and the impact"/></label><fieldset><legend>Issue category</legend><div className="category-radios">{Object.entries(categories).map(([value,label])=><label key={value}><input type="radio" name="category" value={value} checked={form.category===value} onChange={()=>set('category',value)}/><span>{label}</span></label>)}</div></fieldset></>}
-    {existing&&<div className="issue-summary"><b>{categories[existing.category]}</b><p>{existing.issue}</p></div>}
-    <label>Check result<textarea rows={3} value={form.updateNote} onChange={event=>set('updateNote',event.target.value)} placeholder="Result of the latest investigation or checking"/></label>
+    {!existing&&<><label>Find merchant<input placeholder="Type merchant name or code" value={merchantQuery} onChange={event=>setMerchantQuery(event.target.value)}/></label><label>Merchant<select required value={form.merchantId} onChange={event=>set('merchantId',event.target.value)}><option value="">Select merchant</option>{filtered.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name} — {merchant.code}</option>)}</select></label><label>Issue<textarea required rows={4} value={form.issue} onChange={event=>set('issue',event.target.value)} placeholder="Describe what happened and the impact"/></label><fieldset><legend>Issue category</legend><div className="category-radios">{Object.entries(categories).map(([value,label])=><label key={value}><input type="radio" name="category" value={value} checked={form.category===value} onChange={()=>setCategory(value)}/><span>{label}</span></label>)}</div></fieldset>{form.category==='PAYMENT'&&<fieldset className="payment-details"><legend>Payment details</legend><div className="grid2"><label>Payment method<select required value={form.paymentMethod} onChange={event=>setPaymentMethod(event.target.value)}>{Object.entries(paymentMethods).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>Specific area<select required value={form.paymentArea} onChange={event=>set('paymentArea',event.target.value)}>{paymentAreas[form.paymentMethod].map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label></div></fieldset>}</>}
+    {existing&&<div className="issue-summary"><b>{categories[existing.category]}{existing.paymentMethod&&` · ${paymentMethods[existing.paymentMethod]||existing.paymentMethod}`}{existing.paymentArea&&` · ${paymentAreas[existing.paymentMethod||'']?.find(option=>option.value===existing.paymentArea)?.label||existing.paymentArea}`}</b><p>{existing.issue}</p></div>}
+    <label>Action<textarea rows={3} value={form.updateNote} onChange={event=>set('updateNote',event.target.value)} placeholder="Action taken or the latest investigation step"/></label>
     <label>Response<textarea rows={4} value={form.response} onChange={event=>set('response',event.target.value)} placeholder="Latest response or action taken"/></label>
     {existing?<label>PIC<select required value={form.picUserId} onChange={event=>set('picUserId',event.target.value)}>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>:<label>PIC<input value={loggedInUser.name} readOnly/><small>Automatically assigned from the signed-in user.</small></label>}
     <div className="grid2"><label>ACR ticket (optional)<input value={form.acrTicket} onChange={event=>set('acrTicket',event.target.value)} placeholder="e.g. ACR-12345"/></label><label>Status<select value={form.status} onChange={event=>set('status',event.target.value)}>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label></div>
@@ -73,8 +87,8 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
   const open=cases.filter(item=>item.status!=='SOLVED').length;
   const overdue=cases.filter(item=>item.status!=='SOLVED'&&Date.now()-new Date(item.updatedAt).getTime()>=2*86400000).length;
   function exportCases(){
-    downloadCsv('case-report',['Merchant name','Merchant code','Issue','Category','Check result','Response','PIC','PIC email','ACR ticket','Status','Created by','Created at','Last updated'],cases.map(item=>[
-      item.merchant.name,item.merchant.code,item.issue,categories[item.category]||item.category,item.updateNote||'',item.response||'',
+    downloadCsv('case-report',['Merchant name','Merchant code','Issue','Category','Payment method','Specific area','Action','Response','PIC','PIC email','ACR ticket','Status','Created by','Created at','Last updated'],cases.map(item=>[
+      item.merchant.name,item.merchant.code,item.issue,categories[item.category]||item.category,paymentMethods[item.paymentMethod||'']||'',paymentAreas[item.paymentMethod||'']?.find(option=>option.value===item.paymentArea)?.label||'',item.updateNote||'',item.response||'',
       item.pic.name,item.pic.email,item.acrTicket||'',statuses[item.status]||item.status,item.createdBy,
       new Date(item.createdAt).toLocaleString('en-GB'),new Date(item.updatedAt).toLocaleString('en-GB')
     ]));
@@ -103,11 +117,11 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
         </div>
       </div>
       <div className="table-scroll"><table className="case-table">
-        <thead><tr><th>Merchant name</th><th>Category</th><th>Check result</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Merchant name</th><th>Category</th><th>Action</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
         <tbody>{cases.map(item=><tr key={item.id}>
           <td><b>{item.merchant.name}</b></td>
-          <td>{categories[item.category]}</td>
-          <td><span className="case-update">{item.updateNote||'No check result yet'}</span></td>
+          <td><span>{categories[item.category]}</span>{item.paymentMethod&&<small className="case-payment-detail">{paymentMethods[item.paymentMethod]||item.paymentMethod} · {paymentAreas[item.paymentMethod]?.find(option=>option.value===item.paymentArea)?.label||item.paymentArea}</small>}</td>
+          <td><span className="case-update">{item.updateNote||'No action yet'}</span></td>
           <td><span className="case-response">{item.response||'No response yet'}</span></td>
           <td>{item.pic.name}</td>
           <td>{new Date(item.createdAt).toLocaleDateString('en-GB')}</td>

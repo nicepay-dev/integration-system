@@ -1,10 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { Merchant } from '../merchants/merchant.entity';
 import { User } from '../users/user.entity';
 import { CreateCaseDto, UpdateCaseDto } from './case.dto';
-import { CaseRecord, CaseStatus } from './case.entity';
+import { CaseRecord, CaseStatus, IssueCategory } from './case.entity';
+
+const paymentAreas:Record<string,string[]>={
+  CREDIT_CARD:['REGISTER','CHECK_STATUS','THREE_DS','PAYMENT','REFUND','FDS','CREDENTIAL'],
+  VA:['REGISTER','CHECK_STATUS','PAYMENT','CREDENTIAL'],
+  CVS:['REGISTER','CHECK_STATUS','PAYMENT','CREDENTIAL'],
+  DIRECT_DEBIT:['REGISTER','CHECK_STATUS','PAYMENT','CREDENTIAL'],
+  EWALLET:['REGISTER','CHECK_STATUS','PAYMENT','ACCOUNT_BINDING','CREDENTIAL'],
+  PAYLOAN:['REGISTER','CHECK_STATUS','PAYMENT','CREDENTIAL'],
+  PAYOUT:['REGISTER','APPROVE','DANA_TRANSFER','CHECK_STATUS','BALANCE','CREDENTIAL'],
+  QRIS:['REGISTER','CHECK_STATUS','PAYMENT','CREDENTIAL'],
+};
 
 @Injectable()
 export class CasesService {
@@ -19,7 +30,7 @@ export class CasesService {
     if(status && Object.values(CaseStatus).includes(status as CaseStatus)) query.andWhere('case.status = :status',{status});
     if(merchantId) query.andWhere('merchant.id = :merchantId',{merchantId});
     if(picUserId) query.andWhere('pic.id = :picUserId',{picUserId});
-    if(search) query.andWhere('(merchant.name ILIKE :search OR case.issue ILIKE :search OR case.acrTicket ILIKE :search)',{search:`%${search}%`});
+    if(search) query.andWhere('(merchant.name ILIKE :search OR case.issue ILIKE :search OR case.acrTicket ILIKE :search OR case.updateNote ILIKE :search OR case.response ILIKE :search OR case.paymentMethod ILIKE :search OR case.paymentArea ILIKE :search)',{search:`%${search}%`});
     if(dateFrom && !Number.isNaN(Date.parse(dateFrom))) query.andWhere('case.updatedAt >= :dateFrom',{dateFrom:new Date(dateFrom)});
     if(dateTo && !Number.isNaN(Date.parse(dateTo))) query.andWhere('case.updatedAt <= :dateTo',{dateTo:new Date(dateTo)});
     return query.getMany();
@@ -32,7 +43,15 @@ export class CasesService {
     ]);
     if(!merchant) throw new NotFoundException('Merchant not found');
     if(!pic) throw new NotFoundException('Logged-in user was not found');
-    return this.cases.save(this.cases.create({merchant,pic,issue:dto.issue,category:dto.category,response:dto.response||null,updateNote:dto.checkResult||dto.updateNote||null,acrTicket:dto.acrTicket||null,status:dto.status||CaseStatus.CHECKING,createdBy}));
+    let paymentMethod:string|null=null;
+    let paymentArea:string|null=null;
+    if(dto.category===IssueCategory.PAYMENT){
+      paymentMethod=(dto.paymentMethod||'').toUpperCase();
+      paymentArea=(dto.paymentArea||'').toUpperCase();
+      if(!paymentAreas[paymentMethod]) throw new BadRequestException('Select a valid payment method');
+      if(!paymentAreas[paymentMethod].includes(paymentArea)) throw new BadRequestException('Select a valid specific area for the payment method');
+    }
+    return this.cases.save(this.cases.create({merchant,pic,issue:dto.issue,category:dto.category,paymentMethod,paymentArea,response:dto.response||null,updateNote:dto.action||dto.checkResult||dto.updateNote||null,acrTicket:dto.acrTicket||null,status:dto.status||CaseStatus.CHECKING,createdBy}));
   }
 
   async update(id:string,dto:UpdateCaseDto) {
@@ -44,7 +63,8 @@ export class CasesService {
       record.pic=pic;
     }
     if(dto.response!==undefined) record.response=dto.response||null;
-    if(dto.checkResult!==undefined) record.updateNote=dto.checkResult||null;
+    if(dto.action!==undefined) record.updateNote=dto.action||null;
+    else if(dto.checkResult!==undefined) record.updateNote=dto.checkResult||null;
     else if(dto.updateNote!==undefined) record.updateNote=dto.updateNote||null;
     if(dto.acrTicket!==undefined) record.acrTicket=dto.acrTicket||null;
     if(dto.status) record.status=dto.status;
