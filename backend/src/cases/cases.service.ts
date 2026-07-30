@@ -14,17 +14,14 @@ export class CasesService {
     @InjectRepository(User) private users:Repository<User>,
   ) {}
 
-  list(status?:string, merchantId?:string, search?:string, dateFrom?:string, dateTo?:string) {
+  list(status?:string, merchantId?:string, picUserId?:string, search?:string, dateFrom?:string, dateTo?:string) {
     const query=this.cases.createQueryBuilder('case').leftJoinAndSelect('case.merchant','merchant').leftJoinAndSelect('case.pic','pic').orderBy('case.updatedAt','DESC');
     if(status && Object.values(CaseStatus).includes(status as CaseStatus)) query.andWhere('case.status = :status',{status});
     if(merchantId) query.andWhere('merchant.id = :merchantId',{merchantId});
+    if(picUserId) query.andWhere('pic.id = :picUserId',{picUserId});
     if(search) query.andWhere('(merchant.name ILIKE :search OR case.issue ILIKE :search OR case.acrTicket ILIKE :search)',{search:`%${search}%`});
-    if(dateFrom && !Number.isNaN(Date.parse(dateFrom))) query.andWhere('case.updatedAt >= :dateFrom',{dateFrom:new Date(`${dateFrom}T00:00:00+07:00`)});
-    if(dateTo && !Number.isNaN(Date.parse(dateTo))) {
-      const end=new Date(`${dateTo}T00:00:00+07:00`);
-      end.setDate(end.getDate()+1);
-      query.andWhere('case.updatedAt < :dateTo',{dateTo:end});
-    }
+    if(dateFrom && !Number.isNaN(Date.parse(dateFrom))) query.andWhere('case.updatedAt >= :dateFrom',{dateFrom:new Date(dateFrom)});
+    if(dateTo && !Number.isNaN(Date.parse(dateTo))) query.andWhere('case.updatedAt <= :dateTo',{dateTo:new Date(dateTo)});
     return query.getMany();
   }
 
