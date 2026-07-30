@@ -63,6 +63,12 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
     setCases(caseData);
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
   }
+  async function clearFilters(){
+    setSearch('');setStatus('ALL');setMerchantId('ALL');setPicUserId('ALL');setMerchantFilter('');setDateFrom('');setDateTo('');
+    const [caseData,notificationData]=await Promise.all([api('/cases'),api('/notifications')]);
+    setCases(caseData);
+    setNotifications(notificationData.filter((item:any)=>item.caseRecord));
+  }
   useEffect(()=>{load()},[status,merchantId,picUserId]);
   const open=cases.filter(item=>item.status!=='SOLVED').length;
   const overdue=cases.filter(item=>item.status!=='SOLVED'&&Date.now()-new Date(item.updatedAt).getTime()>=2*86400000).length;
@@ -83,7 +89,19 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
     {overdue>0&&<section className="attention"><div className="attention-icon"><AlertTriangle/></div><div><b>{overdue} cases need an update</b><p>These cases have been open without an update for two days or more.</p></div></section>}
     <section className="stats case-stats"><article><span>Total cases</span><b>{cases.length}</b><small>Current filtered view</small></article><article><span>Open cases</span><b>{open}</b><small>Still needs follow-up</small></article><article><span>Solved</span><b>{cases.filter(item=>item.status==='SOLVED').length}</b><small>Resolved cases</small></article></section>
     <section className="table-card">
-      <div className="table-head case-filters"><div><h2>Issue register</h2><p className="muted">Filter by merchant, PIC, status, or last-updated date and time.</p></div><div className="tools"><div className="search"><Search/><input placeholder="Search issue or ACR" value={search} onChange={event=>setSearch(event.target.value)} onKeyDown={event=>event.key==='Enter'&&load()}/></div><div className="merchant-filter"><input placeholder="Filter merchant list" value={merchantFilter} onChange={event=>setMerchantFilter(event.target.value)}/><select value={merchantId} onChange={event=>setMerchantId(event.target.value)}><option value="ALL">All merchants</option>{filteredMerchants.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></div><select aria-label="Filter by PIC" value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select><select value={status} onChange={event=>setStatus(event.target.value)}><option value="ALL">All statuses</option>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><label className="date-filter">From<input type="datetime-local" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label><label className="date-filter">To<input type="datetime-local" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label><button className="filter-button" onClick={load}>Apply</button><button className="export-button" onClick={exportCases} disabled={!cases.length}><Download/>Export ({cases.length})</button></div></div>
+      <div className="table-head case-filters">
+        <div className="case-filter-heading"><div><h2>Issue register</h2><p className="muted">Filter cases using one or more fields below.</p></div><button className="export-button" onClick={exportCases} disabled={!cases.length}><Download/>Export ({cases.length})</button></div>
+        <div className="case-filter-grid">
+          <label className="case-filter-field"><span>Search case</span><div className="case-search"><Search/><input placeholder="Issue, merchant, or ACR ticket" value={search} onChange={event=>setSearch(event.target.value)} onKeyDown={event=>event.key==='Enter'&&load()}/></div></label>
+          <label className="case-filter-field"><span>Find merchant</span><input placeholder="Type merchant name or MID" value={merchantFilter} onChange={event=>setMerchantFilter(event.target.value)}/></label>
+          <label className="case-filter-field"><span>Merchant</span><select value={merchantId} onChange={event=>setMerchantId(event.target.value)}><option value="ALL">All merchants</option>{filteredMerchants.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></label>
+          <label className="case-filter-field"><span>PIC</span><select value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>
+          <label className="case-filter-field"><span>Status</span><select value={status} onChange={event=>setStatus(event.target.value)}><option value="ALL">All statuses</option>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+          <label className="case-filter-field"><span>Updated from</span><input type="datetime-local" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label>
+          <label className="case-filter-field"><span>Updated to</span><input type="datetime-local" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label>
+          <div className="case-filter-buttons"><button className="clear-filter-button" type="button" onClick={clearFilters}>Clear</button><button className="filter-button" type="button" onClick={load}>Apply filters</button></div>
+        </div>
+      </div>
       <table className="case-table">
         <thead><tr><th>Merchant name</th><th>Category</th><th>Check result</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
         <tbody>{cases.map(item=><tr key={item.id}>
