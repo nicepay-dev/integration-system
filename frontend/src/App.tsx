@@ -179,6 +179,9 @@ export default function App() {
       merchant.statusUpdatedAt?new Date(merchant.statusUpdatedAt).toLocaleString('en-GB'):'',merchant.targetLiveDate||'',merchant.notes||''
     ]));
   }
+  function clearMerchantFilters(){
+    setSearch('');setPicFilter('ALL');setFilter('ALL');
+  }
   return <div className="app"><aside>
     <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
     <div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.clear();setAuthed(false)}}><LogOut/></button></div>
@@ -190,26 +193,26 @@ export default function App() {
     <section className="attention"><div className="attention-icon"><AlertTriangle/></div><div><b>{summary.stale} merchants need a progress update</b><p>No status changes for 7 days or more. Follow up to keep timelines on track.</p></div><button>Review now <ChevronRight/></button></section>
     <HomeCharts merchants={merchants} cases={cases} notifications={notifications}/>
     <section className="stats"><article><span>Total merchants</span><b>{summary.total}</b><small><TrendingUp/> Active portfolio</small></article><article><span>Average progress</span><b>{summary.averageProgress}%</b><small>Across all integrations</small></article><article><span>Live merchants</span><b>{summary.live}</b><small><CheckCircle2/> Successfully launched</small></article><article><span>Blocked</span><b>{summary.blocked}</b><small className="danger">Needs intervention</small></article></section>
-    <section className="table-card"><div className="table-head"><div><h2>Merchant progress</h2><p className="muted">Track every integration from onboarding to launch.</p></div><div className="tools"><div className="search"><Search/><input placeholder="Search merchants" value={search} onChange={event=>setSearch(event.target.value)}/></div><select value={picFilter} onChange={event=>setPicFilter(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.email}>{member.name}</option>)}</select><select value={filter} onChange={event=>setFilter(event.target.value)}><option value="ALL">All statuses</option>{Object.keys(labels).map(value=><option key={value} value={value}>{labels[value]}</option>)}</select><button className="export-button" onClick={exportMerchants} disabled={!visible.length}><Download/>Export ({visible.length})</button></div></div>
-      <table className="merchant-table">
+    <section className="table-card merchant-table-card"><div className="table-head merchant-filters"><div className="merchant-filter-heading"><div><h2>Merchant progress</h2><p className="muted">Filter merchants by name, MID, PIC, or integration status.</p></div><button className="export-button" onClick={exportMerchants} disabled={!visible.length}><Download/>Export ({visible.length})</button></div><div className="merchant-filter-grid"><label><span>Search merchant</span><div className="merchant-search"><Search/><input placeholder="Merchant name or MID" value={search} onChange={event=>setSearch(event.target.value)}/></div></label><label><span>PIC</span><select value={picFilter} onChange={event=>setPicFilter(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.email}>{member.name}</option>)}</select></label><label><span>Status</span><select value={filter} onChange={event=>setFilter(event.target.value)}><option value="ALL">All statuses</option>{Object.keys(labels).map(value=><option key={value} value={value}>{labels[value]}</option>)}</select></label><div className="merchant-filter-actions"><button type="button" onClick={clearMerchantFilters}>Clear filters</button></div></div></div>
+      <div className="table-scroll"><table className="merchant-table">
         <thead><tr><th>Merchant</th><th>Status</th><th>PIC</th><th>MIDs &amp; payment methods</th><th>Progress</th><th>Last update</th><th>Target live</th><th>Actions</th></tr></thead>
         <tbody>{visible.map(merchant=>{
           const finished=['LIVE','CANCEL'].includes(merchant.status);
           return <tr key={merchant.id} className={days(merchant.statusUpdatedAt)>=7&&!finished?'stale':''}>
-            <td><div className="merchant-logo">{merchant.name.slice(0,2).toUpperCase()}</div><div><b>{merchant.name}</b><small>{merchant.mids?.length?`${merchant.mids.length} MID${merchant.mids.length>1?'s':''}`:merchant.code}</small></div></td>
+            <td><div className="merchant-identity"><div className="merchant-logo">{merchant.name.slice(0,2).toUpperCase()}</div><div><b>{merchant.name}</b><small>{merchant.mids?.length?`${merchant.mids.length} MID${merchant.mids.length>1?'s':''}`:merchant.code}</small></div></div></td>
             <td><span className={`status ${merchant.status.toLowerCase()}`}>{labels[merchant.status]}</span></td>
             <td><b>{merchant.picName}</b><small>{merchant.picEmail}</small></td>
             <td><div className="mid-method-list">{merchant.mids?.length?merchant.mids.map(item=><section className="mid-method-row" key={item.mid}>
               <div className="mid-method-heading"><b>{item.mid}</b><span className={`mid-status ${item.status.toLowerCase()}`}>{labels[item.status]||item.status}</span></div>
               <div className="method-chips">{item.paymentMethods.length?item.paymentMethods.map(method=><span key={method}><b>{method}</b><small>{item.paymentMethodStatuses?.[method]||'Preparing by merchant'}</small></span>):<em>No payment methods</em>}</div>
             </section>):<span className="muted">No MID assigned</span>}</div></td>
-            <td><div className="progress"><i style={{width:`${merchant.progress}%`}}/></div><b>{merchant.progress}%</b></td>
+            <td><div className="merchant-progress"><div className="progress"><i style={{width:`${merchant.progress}%`}}/></div><b>{merchant.progress}%</b></div></td>
             <td><span>{days(merchant.statusUpdatedAt)===0?'Today':`${days(merchant.statusUpdatedAt)} days ago`}</span>{days(merchant.statusUpdatedAt)>=7&&!finished&&<small className="danger">Update overdue</small>}</td>
             <td>{merchant.targetLiveDate?new Date(merchant.targetLiveDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
             <td><div className="row-actions"><button title="Edit merchant" onClick={()=>setEditingMerchant(merchant)}><Pencil/>Edit</button><button title="Update progress" onClick={()=>setSelected(merchant)}>Progress <ChevronRight/></button><button className="delete-action" title="Delete merchant" onClick={()=>deleteMerchant(merchant)}><Trash2/></button></div></td>
           </tr>;
         })}</tbody>
-      </table>
+      </table></div>
       {!visible.length&&<div className="empty">No merchants match your filters.</div>}
     </section>
   </main>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;

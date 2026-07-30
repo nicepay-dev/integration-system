@@ -102,7 +102,7 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
           <div className="case-filter-buttons"><button className="clear-filter-button" type="button" onClick={clearFilters}>Clear</button><button className="filter-button" type="button" onClick={load}>Apply filters</button></div>
         </div>
       </div>
-      <table className="case-table">
+      <div className="table-scroll"><table className="case-table">
         <thead><tr><th>Merchant name</th><th>Category</th><th>Check result</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
         <tbody>{cases.map(item=><tr key={item.id}>
           <td><b>{item.merchant.name}</b></td>
@@ -115,7 +115,7 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
           <td><span className={`case-status ${item.status.toLowerCase()}`}>{statuses[item.status]}</span></td>
           <td><div className="row-actions"><button onClick={()=>setEditing(item)}>Update <ChevronRight/></button><button className="delete-action" title="Delete case" onClick={()=>deleteCase(item)}><Trash2/></button></div></td>
         </tr>)}</tbody>
-      </table>
+      </table></div>
       {!cases.length&&<div className="empty"><ClipboardCheck/><p>No cases match the current filters.</p></div>}
     </section>
     {creating&&<CaseModal merchants={merchants} members={members} close={()=>setCreating(false)} saved={load}/>}

@@ -80,6 +80,10 @@ export default function MeetingsPage({merchants,members}:{merchants:Merchant[];m
     if(dateTo)params.set('dateTo',dateTo);
     setMeetings(await api(`/meetings?${params}`));
   }
+  async function clearFilters(){
+    setSearch('');setMerchantId('ALL');setPicUserId('ALL');setDateFrom('');setDateTo('');
+    setMeetings(await api('/meetings'));
+  }
   useEffect(()=>{load()},[]);
   async function remove(meeting:Meeting){
     if(!window.confirm(`Delete the ${meetingTypes[meeting.meetingType]} meeting for ${meeting.merchant?.name||meeting.merchantName}?`))return;
@@ -105,16 +109,17 @@ export default function MeetingsPage({merchants,members}:{merchants:Merchant[];m
     <section className="stats meeting-stats"><article><span>Future meetings</span><b>{futureMeetings.length}</b><small>Scheduled from now onward</small></article><article><span>Completed meetings</span><b>{completedMeetings.length}</b><small>Meeting time has passed</small></article><article><span>Organizations represented</span><b>{new Set(meetings.map(item=>item.merchant?.id||`other:${item.merchantName}`)).size}</b><small>Across this filtered view</small></article></section>
     <section className="table-card">
       <div className="meeting-tabs" role="tablist" aria-label="Meeting schedule"><button role="tab" aria-selected={activeTab==='future'} className={activeTab==='future'?'active':''} onClick={()=>setActiveTab('future')}>Future meetings <span>{futureMeetings.length}</span></button><button role="tab" aria-selected={activeTab==='completed'} className={activeTab==='completed'?'active':''} onClick={()=>setActiveTab('completed')}>Completed meetings <span>{completedMeetings.length}</span></button></div>
-      <div className="table-head meeting-filters"><div><h2>{activeTab==='future'?'Future meeting schedule':'Completed meeting history'}</h2><p className="muted">Filter by merchant, PIC, date, or meeting notes.</p></div><div className="tools">
-        <div className="search"><Search/><input value={search} onChange={event=>setSearch(event.target.value)} onKeyDown={event=>event.key==='Enter'&&load()} placeholder="Search MOM or agenda"/></div>
-        <select value={merchantId} onChange={event=>setMerchantId(event.target.value)}><option value="ALL">All merchants / organizations</option><option value="EXTERNAL">Other organizations only</option>{merchants.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select>
-        <select value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select>
-        <label className="date-filter">From<input type="date" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label><label className="date-filter">To<input type="date" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label>
-        <button className="filter-button" onClick={load}>Apply</button><button className="export-button" disabled={!visibleMeetings.length} onClick={exportMeetings}><Download/>Export ({visibleMeetings.length})</button>
+      <div className="table-head meeting-filters"><div className="meeting-filter-heading"><div><h2>{activeTab==='future'?'Future meeting schedule':'Completed meeting history'}</h2><p className="muted">Filter meetings using one or more fields below.</p></div><button className="export-button" disabled={!visibleMeetings.length} onClick={exportMeetings}><Download/>Export ({visibleMeetings.length})</button></div><div className="meeting-filter-grid">
+        <label><span>Search meeting</span><div className="meeting-search"><Search/><input value={search} onChange={event=>setSearch(event.target.value)} onKeyDown={event=>event.key==='Enter'&&load()} placeholder="Merchant, MOM, or agenda"/></div></label>
+        <label><span>Merchant / organization</span><select value={merchantId} onChange={event=>setMerchantId(event.target.value)}><option value="ALL">All merchants / organizations</option><option value="EXTERNAL">Other organizations only</option>{merchants.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></label>
+        <label><span>PIC</span><select value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>
+        <label><span>Meeting date from</span><input type="date" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label>
+        <label><span>Meeting date to</span><input type="date" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label>
+        <div className="meeting-filter-actions"><button className="clear-filter-button" type="button" onClick={clearFilters}>Clear</button><button className="filter-button" type="button" onClick={load}>Apply filters</button></div>
       </div></div>
-      <table className="meeting-table"><thead><tr><th>Merchant</th><th>Date</th><th>Type</th><th>PIC</th><th>MOM</th><th>Action items</th><th>Next follow-up</th><th>Actions</th></tr></thead><tbody>{visibleMeetings.map(item=><tr key={item.id}>
+      <div className="table-scroll"><table className="meeting-table"><thead><tr><th>Merchant</th><th>Date</th><th>Type</th><th>PIC</th><th>MOM</th><th>Action items</th><th>Next follow-up</th><th>Actions</th></tr></thead><tbody>{visibleMeetings.map(item=><tr key={item.id}>
         <td><b>{item.merchant?.name||item.merchantName}</b><small>{item.merchant?.code||'Other organization'}</small></td><td>{new Date(item.meetingDate).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}</td><td>{meetingTypes[item.meetingType]||item.meetingType}</td><td><b>{item.pic.name}</b><small>{item.pic.email}</small></td><td><span className="meeting-text">{item.mom}</span></td><td><span className="meeting-text">{item.actionItems||'—'}</span></td><td>{item.nextFollowUpDate?new Date(`${item.nextFollowUpDate}T00:00:00`).toLocaleDateString('en-GB'):'—'}</td><td><div className="row-actions"><button onClick={()=>setEditing(item)}><Pencil/>Edit</button><button className="delete-action" onClick={()=>remove(item)}><Trash2/></button></div></td>
-      </tr>)}</tbody></table>
+      </tr>)}</tbody></table></div>
       {!visibleMeetings.length&&<div className="empty"><CalendarDays/><p>No {activeTab} meetings match the current filters.</p></div>}
     </section>
     {creating&&<MeetingModal merchants={merchants} members={members} close={()=>setCreating(false)} saved={load}/>}

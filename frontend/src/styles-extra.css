@@ -119,8 +119,12 @@ table td:nth-child(4) {
   align-items: center;
   gap: 10px;
 }
-.merchant-table td:nth-child(4) { display: table-cell; }
-.merchant-table td:nth-child(5) { display: flex; align-items: center; gap: 10px; }
+.merchant-table td,.merchant-table td:first-child,.merchant-table td:nth-child(3),.merchant-table td:nth-child(4),.merchant-table td:nth-child(5) { display: table-cell; vertical-align: top; }
+.table-scroll { width: 100%; overflow-x: auto; }
+.merchant-table-card,.cases-page .table-card,.meetings-page .table-card { overflow: hidden; }
+.merchant-identity { display: flex; align-items: flex-start; gap: 10px; }
+.merchant-progress { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
+.merchant-filters{display:block;min-width:0;padding:22px 24px}.merchant-filter-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.merchant-filter-grid{display:grid;grid-template-columns:minmax(220px,1.4fr) minmax(170px,1fr) minmax(170px,1fr) auto;gap:14px;align-items:end;margin-top:18px;padding:18px;background:#f6fafe;border:1px solid #dceaf3;border-radius:12px}.merchant-filter-grid label{display:grid;gap:7px;min-width:0;color:#4f7187;font-size:11px;font-weight:700}.merchant-filter-grid input,.merchant-filter-grid select{width:100%;min-width:0;height:42px}.merchant-search{display:flex;align-items:center;height:42px;border:1px solid #d8e0de;border-radius:8px;background:#fff;padding-left:10px}.merchant-search:focus-within{border-color:#65abd4;box-shadow:0 0 0 3px #65abd41a}.merchant-search svg{flex:0 0 auto;width:16px;color:#7391a4}.merchant-search input{height:40px;border:0;outline:0;background:transparent}.merchant-filter-actions button{height:42px;border:1px solid #c9dce8;background:#fff;color:#52778f;border-radius:8px;padding:10px 14px;font-weight:700;white-space:nowrap}@media(max-width:1200px){.merchant-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.merchant-filter-actions{align-self:end}}@media(max-width:950px){.table-head.merchant-filters{min-width:0!important}}@media(max-width:650px){.merchant-filter-heading{display:grid}.merchant-filter-grid{grid-template-columns:1fr;padding:14px}}
 @media (max-width: 600px) {
   .option-grid.tech-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
