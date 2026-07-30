@@ -25,11 +25,20 @@ export class CasesService {
     @InjectRepository(User) private users:Repository<User>,
   ) {}
 
-  list(status?:string, merchantId?:string, picUserId?:string, search?:string, dateFrom?:string, dateTo?:string) {
+  list(status?:string, merchantId?:string, picUserId?:string, search?:string, dateFrom?:string, dateTo?:string, category?:string, paymentMethod?:string, paymentArea?:string) {
     const query=this.cases.createQueryBuilder('case').leftJoinAndSelect('case.merchant','merchant').leftJoinAndSelect('case.pic','pic').orderBy('case.updatedAt','DESC');
     if(status && Object.values(CaseStatus).includes(status as CaseStatus)) query.andWhere('case.status = :status',{status});
     if(merchantId) query.andWhere('merchant.id = :merchantId',{merchantId});
     if(picUserId) query.andWhere('pic.id = :picUserId',{picUserId});
+    if(category && Object.values(IssueCategory).includes(category as IssueCategory)) query.andWhere('case.category = :category',{category});
+    if(category===IssueCategory.PAYMENT && paymentMethod) {
+      if(paymentAreas[paymentMethod]) query.andWhere('case.paymentMethod = :paymentMethod',{paymentMethod});
+      else query.andWhere('1 = 0');
+    }
+    if(category===IssueCategory.PAYMENT && paymentMethod && paymentArea) {
+      if(paymentAreas[paymentMethod]?.includes(paymentArea)) query.andWhere('case.paymentArea = :paymentArea',{paymentArea});
+      else query.andWhere('1 = 0');
+    }
     if(search) query.andWhere('(merchant.name ILIKE :search OR case.issue ILIKE :search OR case.acrTicket ILIKE :search OR case.updateNote ILIKE :search OR case.response ILIKE :search OR case.paymentMethod ILIKE :search OR case.paymentArea ILIKE :search)',{search:`%${search}%`});
     if(dateFrom && !Number.isNaN(Date.parse(dateFrom))) query.andWhere('case.updatedAt >= :dateFrom',{dateFrom:new Date(dateFrom)});
     if(dateTo && !Number.isNaN(Date.parse(dateTo))) query.andWhere('case.updatedAt <= :dateTo',{dateTo:new Date(dateTo)});

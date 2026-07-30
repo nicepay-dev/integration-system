@@ -55,6 +55,9 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
   const [cases,setCases]=useState<CaseItem[]>([]);
   const [search,setSearch]=useState('');
   const [status,setStatus]=useState('ALL');
+  const [category,setCategoryFilter]=useState('ALL');
+  const [paymentMethod,setPaymentMethodFilter]=useState('ALL');
+  const [paymentArea,setPaymentAreaFilter]=useState('ALL');
   const [merchantId,setMerchantId]=useState('ALL');
   const [picUserId,setPicUserId]=useState('ALL');
   const [merchantFilter,setMerchantFilter]=useState('');
@@ -70,6 +73,9 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
     if(status!=='ALL')params.set('status',status);
     if(merchantId!=='ALL')params.set('merchantId',merchantId);
     if(picUserId!=='ALL')params.set('picUserId',picUserId);
+    if(category!=='ALL')params.set('category',category);
+    if(category==='PAYMENT'&&paymentMethod!=='ALL')params.set('paymentMethod',paymentMethod);
+    if(category==='PAYMENT'&&paymentMethod!=='ALL'&&paymentArea!=='ALL')params.set('paymentArea',paymentArea);
     if(search)params.set('search',search);
     if(dateFrom)params.set('dateFrom',new Date(dateFrom).toISOString());
     if(dateTo)params.set('dateTo',new Date(dateTo).toISOString());
@@ -78,7 +84,7 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
   }
   async function clearFilters(){
-    setSearch('');setStatus('ALL');setMerchantId('ALL');setPicUserId('ALL');setMerchantFilter('');setDateFrom('');setDateTo('');
+    setSearch('');setStatus('ALL');setCategoryFilter('ALL');setPaymentMethodFilter('ALL');setPaymentAreaFilter('ALL');setMerchantId('ALL');setPicUserId('ALL');setMerchantFilter('');setDateFrom('');setDateTo('');
     const [caseData,notificationData]=await Promise.all([api('/cases'),api('/notifications')]);
     setCases(caseData);
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
@@ -111,6 +117,9 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
           <label className="case-filter-field"><span>Merchant</span><select value={merchantId} onChange={event=>setMerchantId(event.target.value)}><option value="ALL">All merchants</option>{filteredMerchants.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name}</option>)}</select></label>
           <label className="case-filter-field"><span>PIC</span><select value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>
           <label className="case-filter-field"><span>Status</span><select value={status} onChange={event=>setStatus(event.target.value)}><option value="ALL">All statuses</option>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+          <label className="case-filter-field"><span>Category</span><select value={category} onChange={event=>{const value=event.target.value;setCategoryFilter(value);setPaymentMethodFilter('ALL');setPaymentAreaFilter('ALL')}}><option value="ALL">All categories</option>{Object.entries(categories).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+          {category==='PAYMENT'&&<label className="case-filter-field"><span>Payment method</span><select value={paymentMethod} onChange={event=>{setPaymentMethodFilter(event.target.value);setPaymentAreaFilter('ALL')}}><option value="ALL">All payment methods</option>{Object.entries(paymentMethods).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
+          {category==='PAYMENT'&&paymentMethod!=='ALL'&&<label className="case-filter-field"><span>Specific area</span><select value={paymentArea} onChange={event=>setPaymentAreaFilter(event.target.value)}><option value="ALL">All specific areas</option>{paymentAreas[paymentMethod].map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
           <label className="case-filter-field"><span>Updated from</span><input type="datetime-local" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label>
           <label className="case-filter-field"><span>Updated to</span><input type="datetime-local" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label>
           <div className="case-filter-buttons"><button className="clear-filter-button" type="button" onClick={clearFilters}>Clear</button><button className="filter-button" type="button" onClick={load}>Apply filters</button></div>

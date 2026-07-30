@@ -11,8 +11,8 @@ function Bars({items,labels,color}:{items:any[];labels:Record<string,string>;col
   return <div className="chart-bars">{counts.map(item=><div className="chart-row" key={item.key}><span>{item.label}</span><div><i style={{width:`${(item.value/max)*100}%`,background:color}}/></div><b>{item.value}</b></div>)}</div>;
 }
 
-function rank(items:any[],key:(item:any)=>string|undefined,label:(key:string)=>string) {
-  const counts=new Map<string,number>();
+function rank(items:any[],key:(item:any)=>string|undefined,label:(key:string)=>string,allKeys:string[]=[]){
+  const counts=new Map<string,number>(allKeys.map(value=>[value,0]));
   items.forEach(item=>{const value=key(item);if(value)counts.set(value,(counts.get(value)||0)+1)});
   return [...counts].map(([value,count])=>({value,label:label(value),count})).sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
 }
@@ -31,7 +31,7 @@ export default function HomeCharts({merchants,cases,notifications}:Props) {
   const total=Math.max(1,totalNotifications);
   const merchantEnd=(merchantNotifications/total)*100;
   const caseEnd=merchantEnd+(caseNotifications/total)*100;
-  const categoryRanking=rank(cases,item=>item.category,key=>categoryLabels[key]||key);
+  const categoryRanking=rank(cases,item=>item.category,key=>categoryLabels[key]||key,Object.keys(categoryLabels));
   const paymentCases=cases.filter(item=>item.category==='PAYMENT');
   const methodRanking=rank(paymentCases,item=>item.paymentMethod,key=>paymentMethodLabels[key]||key);
   const areaRanking=rank(paymentCases,item=>item.paymentMethod&&item.paymentArea?`${item.paymentMethod}:${item.paymentArea}`:undefined,key=>{const [method,area]=key.split(':');return `${paymentMethodLabels[method]||method} · ${paymentAreaLabels[area]||area}`});
@@ -45,7 +45,7 @@ export default function HomeCharts({merchants,cases,notifications}:Props) {
   <section className="case-analysis">
     <div className="case-analysis-heading"><div><p className="eyebrow">CASE ANALYSIS</p><h2>Where issues happen most</h2><p>Ranking based on all recorded cases. Payment areas combine the payment method and its specific issue area.</p></div><strong>{cases.length}<small>Total cases</small></strong></div>
     <div className="analysis-grid">
-      <article><header><div><span>By category</span><small>All issue categories</small></div><b>{categoryRanking[0]?.label||'—'}</b></header><AnalysisList items={categoryRanking}/></article>
+      <article><header><div><span>All categories, ranked</span><small>Highest issue count to lowest</small></div><b>{categoryRanking.length} categories</b></header><AnalysisList items={categoryRanking}/></article>
       <article><header><div><span>By payment method</span><small>Payment cases only</small></div><b>{methodRanking[0]?.label||'—'}</b></header><AnalysisList items={methodRanking}/></article>
       <article><header><div><span>By specific area</span><small>{classifiedPaymentCases} of {paymentCases.length} payment cases classified</small></div><b>{areaRanking[0]?.label||'—'}</b></header><AnalysisList items={areaRanking}/></article>
     </div>

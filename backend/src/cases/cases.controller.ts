@@ -7,7 +7,7 @@ import { CasesService } from './cases.service';
 @Controller('cases')
 export class CasesController {
   constructor(private service:CasesService) {}
-  @Get() list(@Query('status') status?:string,@Query('merchantId') merchantId?:string,@Query('picUserId') picUserId?:string,@Query('search') search?:string,@Query('dateFrom') dateFrom?:string,@Query('dateTo') dateTo?:string){return this.service.list(status,merchantId,picUserId,search,dateFrom,dateTo);}
+  @Get() list(@Query('status') status?:string,@Query('merchantId') merchantId?:string,@Query('picUserId') picUserId?:string,@Query('search') search?:string,@Query('dateFrom') dateFrom?:string,@Query('dateTo') dateTo?:string,@Query('category') category?:string,@Query('paymentMethod') paymentMethod?:string,@Query('paymentArea') paymentArea?:string){return this.service.list(status,merchantId,picUserId,search,dateFrom,dateTo,category,paymentMethod,paymentArea);}
   @Post() create(@Body() dto:CreateCaseDto,@Req() request:any){return this.service.create(dto,request.user.id,request.user.name);}
   @Patch(':id') update(@Param('id') id:string,@Body() dto:UpdateCaseDto){return this.service.update(id,dto);}
   @Delete(':id') remove(@Param('id') id:string){return this.service.remove(id);}
