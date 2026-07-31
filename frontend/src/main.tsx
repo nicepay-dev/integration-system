@@ -9,4 +9,5 @@ import './case-filters.css';
 import './meetings.css';
 import './account.css';
 import './theme-light-blue.css';
+import './responsive.css';
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
