@@ -3,7 +3,7 @@ import { BriefcaseBusiness, CalendarClock, CircleAlert, Store } from 'lucide-rea
 import { api } from './api';
 
 type Member={id:string;name:string;email:string;role:string};
-type Merchant={id:string;picEmail:string;status:string};
+type Merchant={id:string;picEmail:string|null;status:string};
 type CaseItem={id:string;status:string;updatedAt:string;pic?:{id:string;email?:string}};
 type Meeting={id:string;meetingDate:string;pic?:{id:string;email?:string}};
 

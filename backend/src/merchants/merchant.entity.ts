@@ -12,8 +12,8 @@ export class Merchant {
   @Column({type:'varchar',nullable:true}) company:string|null;
   @Column({type:'varchar',nullable:true}) website:string|null;
   @Column({type:'varchar',nullable:true}) salesPic:string|null;
-  @Column() picName:string;
-  @Column() picEmail:string;
+  @Column({type:'varchar',nullable:true}) picName:string|null;
+  @Column({type:'varchar',nullable:true}) picEmail:string|null;
   @OneToMany(()=>MerchantMid,mid=>mid.merchant,{cascade:true}) mids:MerchantMid[];
   @Column({type:'jsonb',default:()=>"'[]'"}) techStacks:string[];
   @Column({type:'jsonb',default:()=>"'[]'"}) integrationTypes:string[];

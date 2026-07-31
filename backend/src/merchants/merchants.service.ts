@@ -45,14 +45,14 @@ export class MerchantsService {
   }
 
   async create(dto:CreateMerchantDto) {
-    const pic=await this.users.findOneBy({id:dto.picUserId});
-    if(!pic)throw new NotFoundException('Selected PIC was not found');
+    const pic=dto.picUserId?await this.users.findOneBy({id:dto.picUserId}):null;
+    if(dto.picUserId&&!pic)throw new NotFoundException('Selected PIC was not found');
     const mids=this.normalizeMids(dto.mids,dto.code,dto.paymentMethods,[],MerchantStatus.ONBOARDING);
     const code=this.codeFromMids(mids);
     if(await this.merchants.exists({where:{code}}))throw new ConflictException(`Merchant MID combination "${code}" already exists`);
     await this.ensureMidsAvailable(mids);
     let merchant=await this.merchants.save(this.merchants.create({
-      name:dto.name.trim(),code,picName:pic.name,picEmail:pic.email,
+      name:dto.name.trim(),code,picName:pic?.name||null,picEmail:pic?.email||null,
       techStacks:dto.techStacks,integrationTypes:dto.integrationTypes,
       targetLiveDate:dto.targetLiveDate?.trim()||null,notes:dto.notes?.trim()||null,
     }));
@@ -63,11 +63,11 @@ export class MerchantsService {
 
   async updateProgress(id:string,dto:UpdateProgressDto,by:string) {
     const merchant=await this.oneEntity(id);
-    if(dto.picUserId){
-      const pic=await this.users.findOneBy({id:dto.picUserId});
-      if(!pic)throw new NotFoundException('Selected PIC was not found');
-      merchant.picName=pic.name;
-      merchant.picEmail=pic.email;
+    if(dto.picUserId!==undefined){
+      const pic=dto.picUserId?await this.users.findOneBy({id:dto.picUserId}):null;
+      if(dto.picUserId&&!pic)throw new NotFoundException('Selected PIC was not found');
+      merchant.picName=pic?.name||null;
+      merchant.picEmail=pic?.email||null;
     }
     merchant.status=dto.status;
     merchant.progress=dto.progress;
@@ -91,11 +91,11 @@ export class MerchantsService {
   async update(id:string,dto:UpdateMerchantDto) {
     let merchant=await this.oneEntity(id);
     const changes:Partial<Merchant>={};
-    if(dto.picUserId){
-      const pic=await this.users.findOneBy({id:dto.picUserId});
-      if(!pic)throw new NotFoundException('Selected PIC was not found');
-      changes.picName=pic.name;
-      changes.picEmail=pic.email;
+    if(dto.picUserId!==undefined){
+      const pic=dto.picUserId?await this.users.findOneBy({id:dto.picUserId}):null;
+      if(dto.picUserId&&!pic)throw new NotFoundException('Selected PIC was not found');
+      changes.picName=pic?.name||null;
+      changes.picEmail=pic?.email||null;
     }
     if(dto.mids!==undefined||dto.code!==undefined||dto.paymentMethods!==undefined){
       const mids=this.normalizeMids(dto.mids,dto.code??merchant.code,dto.paymentMethods,this.currentMids(merchant),merchant.status);

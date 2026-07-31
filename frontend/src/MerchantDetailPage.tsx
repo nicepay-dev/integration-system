@@ -1,11 +1,11 @@
-import { ArrowLeft, Bell, CalendarDays, ChevronRight, ClipboardCheck, CreditCard, UserRound } from 'lucide-react';
+import { ArrowLeft, Bell, CalendarDays, ChevronRight, ClipboardCheck, CreditCard, Pencil, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from './api';
 
 const statusLabels:Record<string,string>={ONBOARDING:'Onboarding',INTEGRATION:'Integration',UAT:'UAT','READY LIVE':'Ready Live',LIVE:'Live',BLOCKED:'Blocked',CANCEL:'Cancel'};
 const caseStatusLabels:Record<string,string>={CHECKING:'Checking',WAITING_PARTNER:'Waiting from partner',WAITING_MERCHANT:'Waiting from merchant',SOLVED:'Solved'};
 
-export default function MerchantDetailPage({merchant,onBack,onCases,onMeetings}:{merchant:any;onBack:()=>void;onCases:()=>void;onMeetings:()=>void}){
+export default function MerchantDetailPage({merchant,onBack,onCases,onMeetings,onProgress}:{merchant:any;onBack:()=>void;onCases:()=>void;onMeetings:()=>void;onProgress:()=>void}){
   const [cases,setCases]=useState<any[]>([]);
   const [meetings,setMeetings]=useState<any[]>([]);
   const [notifications,setNotifications]=useState<any[]>([]);
@@ -16,9 +16,9 @@ export default function MerchantDetailPage({merchant,onBack,onCases,onMeetings}:
   },[notifications,meetings,merchant.id]);
   return <main className="content merchant-detail-page">
     <button className="back-button" onClick={onBack}><ArrowLeft/>Back to merchants</button>
-    <header className="merchant-detail-header"><div><p className="eyebrow">MERCHANT DETAIL</p><h1>{merchant.name}</h1><p className="muted">{merchant.mids?.length||0} MIDs · {merchant.paymentMethods?.length||0} payment methods</p></div><span className={`status ${merchant.status.toLowerCase()}`}>{statusLabels[merchant.status]||merchant.status}</span></header>
+    <header className="merchant-detail-header"><div><p className="eyebrow">MERCHANT DETAIL</p><h1>{merchant.name}</h1><p className="muted">{merchant.mids?.length||0} MIDs · {merchant.paymentMethods?.length||0} payment methods</p></div><div className="header-actions"><span className={`status ${merchant.status.toLowerCase()}`}>{statusLabels[merchant.status]||merchant.status}</span><button className="primary" onClick={onProgress}><Pencil/>Update progress</button></div></header>
     <section className="merchant-detail-summary">
-      <article><UserRound/><span>PIC</span><b>{merchant.picName}</b><small>{merchant.picEmail}</small></article>
+      <article><UserRound/><span>PIC</span><b>{merchant.picName||'Not decided yet'}</b>{merchant.picEmail&&<small>{merchant.picEmail}</small>}</article>
       <article><CreditCard/><span>Progress</span><b>{merchant.progress}%</b><div className="detail-progress"><i style={{width:`${merchant.progress}%`}}/></div></article>
       <article><CalendarDays/><span>Target live</span><b>{merchant.targetLiveDate?new Date(merchant.targetLiveDate).toLocaleDateString('en-GB'):'Not set'}</b><small>Last update {new Date(merchant.statusUpdatedAt).toLocaleDateString('en-GB')}</small></article>
     </section>

@@ -11,7 +11,7 @@ import TeamWorkload from './TeamWorkload';
 import { downloadCsv } from './exportCsv';
 
 type MerchantMid = { mid:string; status:string; paymentMethods:string[]; paymentMethodStatuses:Record<string,string> };
-type Merchant = { id:string; name:string; code:string; mids:MerchantMid[]; picName:string; picEmail:string; paymentMethods:string[]; paymentMethodStatuses:Record<string,string>; techStacks:string[]; integrationTypes:string[]; status:string; progress:number; targetLiveDate?:string; notes?:string; statusUpdatedAt:string };
+type Merchant = { id:string; name:string; code:string; mids:MerchantMid[]; picName:string|null; picEmail:string|null; paymentMethods:string[]; paymentMethodStatuses:Record<string,string>; techStacks:string[]; integrationTypes:string[]; status:string; progress:number; targetLiveDate?:string; notes?:string; statusUpdatedAt:string };
 type Summary = { total:number; live:number; blocked:number; stale:number; averageProgress:number };
 type Member = { id:string; name:string; email:string; role:string };
 const labels:Record<string,string> = { ONBOARDING:'Onboarding', INTEGRATION:'Integration', UAT:'UAT', 'READY LIVE':'Ready Live', LIVE:'Live', BLOCKED:'Blocked', CANCEL:'Cancel' };
@@ -61,7 +61,7 @@ function NewMerchant({ close, saved, members, existing }:{ close:()=>void; saved
   })):existing?.code
     ? existing.code.split(/[,;\n]+/).map(mid=>({mid:mid.trim(),status:existing.status,paymentMethods:[...(existing.paymentMethods||[])],paymentMethodStatuses:{...(existing.paymentMethodStatuses||{})}}))
     : [{mid:'',status:'ONBOARDING',paymentMethods:[],paymentMethodStatuses:{}}];
-  const [form, setForm] = useState({ name:existing?.name||'', mids:initialMids, picUserId:members.find(member=>member.email===existing?.picEmail)?.id||members[0]?.id||'', techStacks:existing?.techStacks||[] as string[], integrationTypes:existing?.integrationTypes||[] as string[], targetLiveDate:existing?.targetLiveDate?.slice(0,10)||'', notes:existing?.notes||'' });
+  const [form, setForm] = useState({ name:existing?.name||'', mids:initialMids, picUserId:existing?(members.find(member=>member.email===existing.picEmail)?.id||''):(members[0]?.id||''), techStacks:existing?.techStacks||[] as string[], integrationTypes:existing?.integrationTypes||[] as string[], targetLiveDate:existing?.targetLiveDate?.slice(0,10)||'', notes:existing?.notes||'' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (key:string, value:string) => setForm({ ...form, [key]:value });
@@ -96,15 +96,15 @@ function NewMerchant({ close, saved, members, existing }:{ close:()=>void; saved
       </section>)}</div>
       <button className="add-mid" type="button" onClick={addMid}><Plus/>Add another MID</button>
     </fieldset>
-    <label>Integration PIC<select required value={form.picUserId} onChange={event=>set('picUserId', event.target.value)}>
-      <option value="" disabled>Select a member</option>{members.map(member=><option key={member.id} value={member.id}>{member.name} — {member.role}</option>)}
+    <label>Integration PIC<select value={form.picUserId} onChange={event=>set('picUserId', event.target.value)}>
+      <option value="">Not decided yet</option>{members.map(member=><option key={member.id} value={member.id}>{member.name} — {member.role}</option>)}
     </select></label>
     {pic && <p style={{margin:'-7px 0 12px',color:'#64736f',fontSize:12}}>{pic.email}</p>}
     <fieldset><legend>Integration types</legend><div className="option-grid">{integrationOptions.map(option=><label className="check-option" key={option}><input type="checkbox" checked={form.integrationTypes.includes(option)} onChange={()=>toggle('integrationTypes',option)}/><span>{option}</span></label>)}</div></fieldset>
     <fieldset><legend>Tech stack</legend><div className="option-grid tech-options">{techOptions.map(option=><label className="check-option" key={option}><input type="checkbox" checked={form.techStacks.includes(option)} onChange={()=>toggle('techStacks',option)}/><span>{option}</span></label>)}</div></fieldset>
     <label>Target live date<input type="date" value={form.targetLiveDate} onChange={event=>set('targetLiveDate', event.target.value)}/></label>
     <label>Notes<textarea rows={3} value={form.notes} onChange={event=>set('notes', event.target.value)}/></label>
-    {error && <p className="error">{error}</p>}<div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary" disabled={busy || !form.picUserId}>{existing?'Save merchant':'Create merchant'}</button></div>
+    {error && <p className="error">{error}</p>}<div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary" disabled={busy}>{existing?'Save merchant':'Create merchant'}</button></div>
   </form></div>;
 }
 
@@ -131,7 +131,7 @@ function Update({ merchant, members, close, save }:{ merchant:Merchant; members:
   return <div className="overlay"><form className="modal" onSubmit={async event=>{ event.preventDefault(); setBusy(true); setError(''); try{await save(merchant,status,progress,note,overallStatuses(),midStatuses,midPaymentStatuses,picUserId);}catch(error){setError((error as Error).message);setBusy(false);} }}>
     <button className="icon close" type="button" onClick={close}><X/></button><p className="eyebrow">PROGRESS UPDATE</p><h2>{merchant.name}</h2>
     <label>Status<select value={status} onChange={event=>setStatus(event.target.value)}>{Object.keys(labels).map(value=><option key={value} value={value}>{labels[value]}</option>)}</select></label>
-    <label>Integration PIC<select required value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="" disabled>Select a member</option>{members.map(member=><option key={member.id} value={member.id}>{member.name} — {member.role}</option>)}</select></label>
+    <label>Integration PIC<select value={picUserId} onChange={event=>setPicUserId(event.target.value)}><option value="">Not decided yet</option>{members.map(member=><option key={member.id} value={member.id}>{member.name} — {member.role}</option>)}</select></label>
     <label>Completion — {progress}%<input type="range" min="0" max="100" step="5" value={progress} onChange={event=>setProgress(+event.target.value)}/></label>
     <p className="field-help">Add or remove MIDs and their payment methods from the Edit merchant action.</p>
     {!!progressMids.length&&<div className="mid-progress-list">{progressMids.map(item=><fieldset key={item.mid}><legend>{item.mid}</legend><label>MID status<select value={midStatuses[item.mid]||merchant.status} onChange={event=>setMidStatuses({...midStatuses,[item.mid]:event.target.value})}>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>{item.paymentMethods.length?<div className="payment-status-list">{item.paymentMethods.map(method=><label key={method}><span>{method}</span><select value={midPaymentStatuses[item.mid]?.[method]||'Preparing by merchant'} onChange={event=>setMidStatus(item.mid,method,event.target.value)}>{paymentStatusOptions.map(value=><option key={value} value={value}>{value}</option>)}</select></label>)}</div>:<p className="field-help">No payment methods assigned to this MID.</p>}</fieldset>)}</div>}
@@ -168,7 +168,7 @@ export default function App() {
     .filter(merchant => (filter === 'ALL' || merchant.status === filter) && (picFilter === 'ALL' || merchant.picEmail === picFilter) && (`${merchant.name} ${merchant.code}`.toLowerCase().includes(search.toLowerCase())))
     .sort((first,second)=>new Date(second.statusUpdatedAt).getTime()-new Date(first.statusUpdatedAt).getTime());
   async function update(merchant:Merchant, status:string, progress:number, note:string, paymentMethodStatuses:Record<string,string>,midStatuses:Record<string,string>,midPaymentMethodStatuses:Record<string,Record<string,string>>,picUserId:string) {
-    await api(`/merchants/${merchant.id}/progress`, { method:'PATCH', body:JSON.stringify({ status, progress, note, paymentMethodStatuses, midStatuses, midPaymentMethodStatuses, picUserId }) }); setSelected(null); load();
+    const updated=await api(`/merchants/${merchant.id}/progress`, { method:'PATCH', body:JSON.stringify({ status, progress, note, paymentMethodStatuses, midStatuses, midPaymentMethodStatuses, picUserId }) }); setSelected(null); if(detailMerchant?.id===updated.id)setDetailMerchant(updated); load();
   }
   async function deleteMerchant(merchant:Merchant){
     if(!window.confirm(`Delete ${merchant.name}? Its cases, notifications, and progress history will also be deleted.`))return;
@@ -213,7 +213,7 @@ export default function App() {
           return <tr key={merchant.id} className={days(merchant.statusUpdatedAt)>=7&&!finished?'stale':''}>
             <td><div className="merchant-identity"><div className="merchant-logo">{merchant.name.slice(0,2).toUpperCase()}</div><div><button className="merchant-detail-link" onClick={()=>openMerchantDetail(merchant)}>{merchant.name}</button><small>{merchant.mids?.length?`${merchant.mids.length} MID${merchant.mids.length>1?'s':''}`:merchant.code}</small></div></div></td>
             <td><span className={`status ${merchant.status.toLowerCase()}`}>{labels[merchant.status]}</span></td>
-            <td><b>{merchant.picName}</b><small>{merchant.picEmail}</small></td>
+            <td><b>{merchant.picName||'Not decided yet'}</b>{merchant.picEmail&&<small>{merchant.picEmail}</small>}</td>
             <td><div className="mid-method-list">{merchant.mids?.length?merchant.mids.map(item=><section className="mid-method-row" key={item.mid}>
               <div className="mid-method-heading"><b>{item.mid}</b><span className={`mid-status ${item.status.toLowerCase()}`}>{labels[item.status]||item.status}</span></div>
               <div className="method-chips">{item.paymentMethods.length?item.paymentMethods.map(method=><span key={method}><b>{method}</b><small>{item.paymentMethodStatuses?.[method]||'Preparing by merchant'}</small></span>):<em>No payment methods</em>}</div>
@@ -227,5 +227,5 @@ export default function App() {
       </table></div>
       {!visible.length&&<div className="empty">No merchants match your filters.</div>}
     </section>
-  </main>:page==='merchant-detail'&&detailMerchant?<MerchantDetailPage merchant={detailMerchant} onBack={()=>setPage('merchants')} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')}/>:page==='notifications'?<NotificationsPage onMerchant={openMerchantDetail} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onChanged={load}/>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
+  </main>:page==='merchant-detail'&&detailMerchant?<MerchantDetailPage merchant={detailMerchant} onBack={()=>setPage('merchants')} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onProgress={()=>setSelected(detailMerchant)}/>:page==='notifications'?<NotificationsPage onMerchant={openMerchantDetail} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onChanged={load}/>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
 }
