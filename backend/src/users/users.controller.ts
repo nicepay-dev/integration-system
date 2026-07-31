@@ -1,19 +1,11 @@
-import { Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsEmail, IsIn, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength } from 'class-validator';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 
-const USER_POSITIONS=[
-  'staff integrasi',
-  'lead integrasi',
-  'head section',
-  'head of software engineer',
-  'it innovation team leader',
-  'head of it',
-] as const;
 const USER_MANAGERS=new Set([
   'lead integrasi',
   'head section',
@@ -25,10 +17,10 @@ const USER_MANAGERS=new Set([
 class CreateUserDto {
   @IsString() @MinLength(2) name:string;
   @IsEmail() email:string;
-  @IsString() @IsIn(USER_POSITIONS) role:string;
+  @IsString() @MinLength(2) role:string;
   @IsString() @MinLength(8) password:string;
 }
-class UpdateUserPositionDto { @IsString() @IsIn(USER_POSITIONS) role:string; }
+class UpdateUserPositionDto { @IsString() @MinLength(2) role:string; }
 class ResetUserPasswordDto { @IsString() @MinLength(8) newPassword:string; }
 
 @UseGuards(AuthGuard('jwt'))
@@ -38,7 +30,7 @@ export class UsersController {
 
   private assertCanManageUsers(request:any) {
     const requesterRole=String(request.user?.role||'').trim().toLowerCase();
-    if(!USER_MANAGERS.has(requesterRole)){
+    if(!USER_MANAGERS.has(requesterRole)&&!/\b(lead|head)\b/i.test(requesterRole)){
       throw new ForbiddenException('Only an authorized team leader can manage users');
     }
   }
@@ -68,7 +60,9 @@ export class UsersController {
     this.assertCanManageUsers(request);
     const user=await this.users.findOneBy({id});
     if(!user)throw new NotFoundException('User not found');
-    user.role=dto.role;
+    const role=dto.role.trim().toLowerCase();
+    if(role.length<2)throw new BadRequestException('Position name is required');
+    user.role=role;
     await this.users.save(user);
     return{id:user.id,name:user.name,email:user.email,role:user.role,message:`Position updated for ${user.name}`};
   }

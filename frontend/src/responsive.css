@@ -1,6 +1,7 @@
 html,body,#root{min-width:0;max-width:100%;overflow-x:hidden}
 .app,.content,.table-card,.table-scroll{min-width:0}
 .table-scroll{overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
+.merchant-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 
 @media(max-width:1100px){
   .content{padding-inline:24px}
@@ -24,7 +25,7 @@ html,body,#root{min-width:0;max-width:100%;overflow-x:hidden}
   .app{display:block;padding-bottom:72px}
   aside{inset:auto 0 0;z-index:50;width:100%;height:72px;padding:7px 8px;border-top:1px solid #c4deef;border-right:0;box-shadow:0 -8px 24px #245b7d14}
   aside .brand,.aside-foot{display:none}
-  aside nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;width:100%;margin:0}
+  aside nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;width:100%;margin:0}
   aside nav a,aside nav a:not(.active){min-width:0;justify-content:center;flex-direction:column;gap:3px;padding:7px 2px;font-size:9px;line-height:1.1;text-align:center}
   aside nav a svg{width:19px;height:19px}
   .content{grid-column:auto;padding:20px 14px 92px}

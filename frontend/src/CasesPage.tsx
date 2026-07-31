@@ -20,6 +20,7 @@ const paymentAreas:Record<string,{value:string;label:string}[]>={
   PAYOUT:area(['REGISTER','Register'],['APPROVE','Approve'],['DANA_TRANSFER','Dana transfer'],['CHECK_STATUS','Check status'],['BALANCE','Balance'],['CREDENTIAL','Credential']),
   QRIS:area(['REGISTER','Register'],['CHECK_STATUS','Check status'],['PAYMENT','Payment'],['CREDENTIAL','Credential']),
 };
+const inputDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 
 function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[];members:Member[];existing?:CaseItem|null;close:()=>void;saved:()=>void}) {
   const loggedInUser=JSON.parse(localStorage.getItem('mp_user')||'{"name":"Current user","email":""}');
@@ -63,11 +64,23 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
   const [merchantFilter,setMerchantFilter]=useState('');
   const [dateFrom,setDateFrom]=useState('');
   const [dateTo,setDateTo]=useState('');
+  const [timeFrom,setTimeFrom]=useState('');
+  const [timeTo,setTimeTo]=useState('');
   const [creating,setCreating]=useState(false);
   const [editing,setEditing]=useState<CaseItem|null>(null);
   const [notifications,setNotifications]=useState<any[]>([]);
   const [bell,setBell]=useState(false);
   const filteredMerchants=merchants.filter(item=>`${item.name} ${item.code}`.toLowerCase().includes(merchantFilter.toLowerCase())).slice(0,80);
+  function setDatePreset(preset:'TODAY'|'LAST_7_DAYS'|'THIS_MONTH'){
+    const end=new Date();
+    const start=new Date(end);
+    if(preset==='LAST_7_DAYS')start.setDate(end.getDate()-6);
+    if(preset==='THIS_MONTH')start.setDate(1);
+    setDateFrom(inputDate(start));
+    setDateTo(inputDate(end));
+    setTimeFrom('00:00');
+    setTimeTo('23:59');
+  }
   async function load(){
     const params=new URLSearchParams();
     if(status!=='ALL')params.set('status',status);
@@ -77,14 +90,14 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
     if(category==='PAYMENT'&&paymentMethod!=='ALL')params.set('paymentMethod',paymentMethod);
     if(category==='PAYMENT'&&paymentMethod!=='ALL'&&paymentArea!=='ALL')params.set('paymentArea',paymentArea);
     if(search)params.set('search',search);
-    if(dateFrom)params.set('dateFrom',new Date(dateFrom).toISOString());
-    if(dateTo)params.set('dateTo',new Date(dateTo).toISOString());
+    if(dateFrom)params.set('dateFrom',new Date(`${dateFrom}T${timeFrom||'00:00'}:00.000`).toISOString());
+    if(dateTo)params.set('dateTo',new Date(`${dateTo}T${timeTo||'23:59'}:59.999`).toISOString());
     const [caseData,notificationData]=await Promise.all([api(`/cases?${params}`),api('/notifications')]);
     setCases(caseData);
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
   }
   async function clearFilters(){
-    setSearch('');setStatus('ALL');setCategoryFilter('ALL');setPaymentMethodFilter('ALL');setPaymentAreaFilter('ALL');setMerchantId('ALL');setPicUserId('ALL');setMerchantFilter('');setDateFrom('');setDateTo('');
+    setSearch('');setStatus('ALL');setCategoryFilter('ALL');setPaymentMethodFilter('ALL');setPaymentAreaFilter('ALL');setMerchantId('ALL');setPicUserId('ALL');setMerchantFilter('');setDateFrom('');setDateTo('');setTimeFrom('');setTimeTo('');
     const [caseData,notificationData]=await Promise.all([api('/cases'),api('/notifications')]);
     setCases(caseData);
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
@@ -120,8 +133,7 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
           <label className="case-filter-field"><span>Category</span><select value={category} onChange={event=>{const value=event.target.value;setCategoryFilter(value);setPaymentMethodFilter('ALL');setPaymentAreaFilter('ALL')}}><option value="ALL">All categories</option>{Object.entries(categories).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
           {category==='PAYMENT'&&<label className="case-filter-field"><span>Payment method</span><select value={paymentMethod} onChange={event=>{setPaymentMethodFilter(event.target.value);setPaymentAreaFilter('ALL')}}><option value="ALL">All payment methods</option>{Object.entries(paymentMethods).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>}
           {category==='PAYMENT'&&paymentMethod!=='ALL'&&<label className="case-filter-field"><span>Specific area</span><select value={paymentArea} onChange={event=>setPaymentAreaFilter(event.target.value)}><option value="ALL">All specific areas</option>{paymentAreas[paymentMethod].map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
-          <label className="case-filter-field"><span>Updated from</span><input type="datetime-local" value={dateFrom} max={dateTo||undefined} onChange={event=>setDateFrom(event.target.value)}/></label>
-          <label className="case-filter-field"><span>Updated to</span><input type="datetime-local" value={dateTo} min={dateFrom||undefined} onChange={event=>setDateTo(event.target.value)}/></label>
+          <fieldset className="case-date-range"><legend>Updated period</legend><div className="case-date-inputs"><div className="date-time-pair"><label className="case-filter-field"><span>From date</span><input type="date" value={dateFrom} max={dateTo||inputDate(new Date())} onChange={event=>setDateFrom(event.target.value)}/></label><label className="case-filter-field time-field"><span>From time</span><input type="time" value={timeFrom} max={dateFrom===dateTo&&timeTo?timeTo:undefined} disabled={!dateFrom} onChange={event=>setTimeFrom(event.target.value)}/></label></div><span className="date-range-arrow">to</span><div className="date-time-pair"><label className="case-filter-field"><span>To date</span><input type="date" value={dateTo} min={dateFrom||undefined} max={inputDate(new Date())} onChange={event=>setDateTo(event.target.value)}/></label><label className="case-filter-field time-field"><span>To time</span><input type="time" value={timeTo} min={dateFrom===dateTo&&timeFrom?timeFrom:undefined} disabled={!dateTo} onChange={event=>setTimeTo(event.target.value)}/></label></div></div><p className="date-range-help">Leave time empty to include the full selected day.</p><div className="date-presets"><button type="button" onClick={()=>setDatePreset('TODAY')}>Today</button><button type="button" onClick={()=>setDatePreset('LAST_7_DAYS')}>Last 7 days</button><button type="button" onClick={()=>setDatePreset('THIS_MONTH')}>This month</button></div></fieldset>
           <div className="case-filter-buttons"><button className="clear-filter-button" type="button" onClick={clearFilters}>Clear</button><button className="filter-button" type="button" onClick={load}>Apply filters</button></div>
         </div>
       </div>

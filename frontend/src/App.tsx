@@ -3,8 +3,11 @@ import { AlertTriangle, Bell, CalendarDays, CheckCircle2, ChevronRight, Clipboar
 import { api } from './api';
 import CasesPage from './CasesPage';
 import HomeCharts from './HomeCharts';
+import MerchantDetailPage from './MerchantDetailPage';
+import NotificationsPage from './NotificationsPage';
 import AccountPage from './AccountPage';
 import MeetingsPage from './MeetingsPage';
+import TeamWorkload from './TeamWorkload';
 import { downloadCsv } from './exportCsv';
 
 type MerchantMid = { mid:string; status:string; paymentMethods:string[]; paymentMethodStatuses:Record<string,string> };
@@ -151,8 +154,10 @@ export default function App() {
   const [selected, setSelected] = useState<Merchant|null>(null);
   const [editingMerchant,setEditingMerchant]=useState<Merchant|null>(null);
   const [bell, setBell] = useState(false);
-  const [page,setPage]=useState<'overview'|'merchants'|'cases'|'meetings'|'account'>('overview');
+  const [page,setPage]=useState<'overview'|'merchants'|'merchant-detail'|'notifications'|'cases'|'meetings'|'account'>('overview');
+  const [detailMerchant,setDetailMerchant]=useState<Merchant|null>(null);
   const user = JSON.parse(localStorage.getItem('mp_user') || '{"name":"Technical Lead","role":"Integration"}');
+  const canViewTeamWorkload=/\b(lead|head)\b/i.test(user.role||'');
   async function load() {
     const [merchantData, summaryData, notificationData, memberData,caseData] = await Promise.all([api('/merchants'), api('/merchants/summary'), api('/notifications'), api('/users'),api('/cases')]);
     setMerchants(merchantData); setSummary(summaryData); setNotifications(notificationData); setMembers(memberData); setCases(caseData);
@@ -182,8 +187,12 @@ export default function App() {
   function clearMerchantFilters(){
     setSearch('');setPicFilter('ALL');setFilter('ALL');
   }
+  function openMerchantDetail(merchant:Merchant){
+    setDetailMerchant(merchant);
+    setPage('merchant-detail');
+  }
   return <div className="app"><aside>
-    <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='merchants'?'active':''} onClick={()=>setPage('merchants')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
+    <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='merchants'||page==='merchant-detail'?'active':''} onClick={()=>setPage('merchants')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='notifications'?'active':''} onClick={()=>setPage('notifications')}><Bell/>Notifications</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
     <div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.clear();setAuthed(false)}}><LogOut/></button></div>
   </aside>{page==='overview'?<main className="content">
     <header><div><p className="eyebrow">INTEGRATION OVERVIEW</p><h1>{greeting()}, {user.name?.split(' ')[0]}.</h1><p className="muted">Here’s what needs your attention across merchant integrations.</p></div>
@@ -192,16 +201,17 @@ export default function App() {
     </header>
     <section className="attention"><div className="attention-icon"><AlertTriangle/></div><div><b>{summary.stale} merchants need a progress update</b><p>No status changes for 7 days or more. Follow up to keep timelines on track.</p></div><button onClick={()=>setPage('merchants')}>Review now <ChevronRight/></button></section>
     <HomeCharts merchants={merchants} cases={cases} notifications={notifications}/>
-    <section className="stats"><article><span>Total merchants</span><b>{summary.total}</b><small><TrendingUp/> Active portfolio</small></article><article><span>Average progress</span><b>{summary.averageProgress}%</b><small>Across all integrations</small></article><article><span>Live merchants</span><b>{summary.live}</b><small><CheckCircle2/> Successfully launched</small></article><article><span>Blocked</span><b>{summary.blocked}</b><small className="danger">Needs intervention</small></article></section>
+    {canViewTeamWorkload&&<TeamWorkload members={members} merchants={merchants} cases={cases}/>}
   </main>:page==='merchants'?<main className="content merchants-page">
     <header><div><p className="eyebrow">MERCHANT OPERATIONS</p><h1>Merchants</h1><p className="muted">Create merchants, manage integration progress, and maintain MID payment methods.</p></div><div className="header-actions"><button className="primary" onClick={()=>setModal(true)}><Plus/>Add merchant</button></div></header>
+    <section className="stats merchant-kpis"><article><span>Total merchants</span><b>{summary.total}</b><small><TrendingUp/> Active portfolio</small></article><article><span>Average progress</span><b>{summary.averageProgress}%</b><small>Across all integrations</small></article><article><span>Live merchants</span><b>{summary.live}</b><small><CheckCircle2/> Successfully launched</small></article><article><span>Integration process</span><b>{merchants.filter(merchant=>merchant.status==='INTEGRATION').length}</b><small>Currently integrating</small></article><article><span>Blocked</span><b>{summary.blocked}</b><small className="danger">Needs intervention</small></article><article><span>Cancelled</span><b>{merchants.filter(merchant=>merchant.status==='CANCEL').length}</b><small>Integration discontinued</small></article></section>
     <section className="table-card merchant-table-card"><div className="table-head merchant-filters"><div className="merchant-filter-heading"><div><h2>Merchant progress</h2><p className="muted">Filter merchants by name, MID, PIC, or integration status.</p></div><button className="export-button" onClick={exportMerchants} disabled={!visible.length}><Download/>Export ({visible.length})</button></div><div className="merchant-filter-grid"><label><span>Search merchant</span><div className="merchant-search"><Search/><input placeholder="Merchant name or MID" value={search} onChange={event=>setSearch(event.target.value)}/></div></label><label><span>PIC</span><select value={picFilter} onChange={event=>setPicFilter(event.target.value)}><option value="ALL">All PICs</option>{members.map(member=><option key={member.id} value={member.email}>{member.name}</option>)}</select></label><label><span>Status</span><select value={filter} onChange={event=>setFilter(event.target.value)}><option value="ALL">All statuses</option>{Object.keys(labels).map(value=><option key={value} value={value}>{labels[value]}</option>)}</select></label><div className="merchant-filter-actions"><button type="button" onClick={clearMerchantFilters}>Clear filters</button></div></div></div>
       <div className="table-scroll"><table className="merchant-table">
         <thead><tr><th>Merchant</th><th>Status</th><th>PIC</th><th>MIDs &amp; payment methods</th><th>Progress</th><th>Last update</th><th>Target live</th><th>Actions</th></tr></thead>
         <tbody>{visible.map(merchant=>{
           const finished=['LIVE','CANCEL'].includes(merchant.status);
           return <tr key={merchant.id} className={days(merchant.statusUpdatedAt)>=7&&!finished?'stale':''}>
-            <td><div className="merchant-identity"><div className="merchant-logo">{merchant.name.slice(0,2).toUpperCase()}</div><div><b>{merchant.name}</b><small>{merchant.mids?.length?`${merchant.mids.length} MID${merchant.mids.length>1?'s':''}`:merchant.code}</small></div></div></td>
+            <td><div className="merchant-identity"><div className="merchant-logo">{merchant.name.slice(0,2).toUpperCase()}</div><div><button className="merchant-detail-link" onClick={()=>openMerchantDetail(merchant)}>{merchant.name}</button><small>{merchant.mids?.length?`${merchant.mids.length} MID${merchant.mids.length>1?'s':''}`:merchant.code}</small></div></div></td>
             <td><span className={`status ${merchant.status.toLowerCase()}`}>{labels[merchant.status]}</span></td>
             <td><b>{merchant.picName}</b><small>{merchant.picEmail}</small></td>
             <td><div className="mid-method-list">{merchant.mids?.length?merchant.mids.map(item=><section className="mid-method-row" key={item.mid}>
@@ -217,5 +227,5 @@ export default function App() {
       </table></div>
       {!visible.length&&<div className="empty">No merchants match your filters.</div>}
     </section>
-  </main>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
+  </main>:page==='merchant-detail'&&detailMerchant?<MerchantDetailPage merchant={detailMerchant} onBack={()=>setPage('merchants')} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')}/>:page==='notifications'?<NotificationsPage onMerchant={openMerchantDetail} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onChanged={load}/>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
 }

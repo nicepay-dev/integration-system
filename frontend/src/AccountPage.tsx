@@ -34,7 +34,7 @@ export default function AccountPage({user,onUserCreated}:{user:AccountUser;onUse
   const [resetPassword,setResetPassword]=useState('');
   const [resetConfirm,setResetConfirm]=useState('');
   const normalizedRole=user.role?.toLowerCase();
-  const canManageUsers=managerPositions.has(normalizedRole);
+  const canManageUsers=managerPositions.has(normalizedRole)||/\b(lead|head)\b/i.test(normalizedRole||'');
 
   async function loadUsers(){
     const data=await api('/users');
