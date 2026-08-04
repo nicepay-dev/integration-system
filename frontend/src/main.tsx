@@ -12,4 +12,6 @@ import './theme-light-blue.css';
 import './responsive.css';
 import './details-notifications.css';
 import './team-workload.css';
+import './pagination.css';
+import './remember-me.css';
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BriefcaseBusiness, CalendarClock, CircleAlert, Store } from 'lucide-react';
 import { api } from './api';
+import Pagination from './Pagination';
 
 type Member={id:string;name:string;email:string;role:string};
 type Merchant={id:string;picEmail:string|null;status:string};
@@ -10,6 +11,8 @@ type Meeting={id:string;meetingDate:string;pic?:{id:string;email?:string}};
 export default function TeamWorkload({members,merchants,cases}:{members:Member[];merchants:Merchant[];cases:CaseItem[]}){
   const [meetings,setMeetings]=useState<Meeting[]>([]);
   const [error,setError]=useState('');
+  const [page,setPage]=useState(1);
+  const [pageSize,setPageSize]=useState(20);
   useEffect(()=>{api('/meetings').then(setMeetings).catch(value=>setError((value as Error).message));},[]);
   const rows=useMemo(()=>{
     const now=Date.now();
@@ -24,12 +27,16 @@ export default function TeamWorkload({members,merchants,cases}:{members:Member[]
       return{...member,activeMerchants,pendingCases:memberCases.length,solvedCases,overdueCases,upcomingMeetings,total:activeMerchants+memberCases.length+upcomingMeetings};
     }).sort((a,b)=>b.overdueCases-a.overdueCases||b.total-a.total||a.name.localeCompare(b.name));
   },[members,merchants,cases,meetings]);
+  const pageCount=Math.max(1,Math.ceil(rows.length/pageSize));
+  const safePage=Math.min(page,pageCount);
+  const pagedRows=rows.slice((safePage-1)*pageSize,safePage*pageSize);
 
   return <section className="team-workload">
     <div className="team-workload-heading"><div><p className="eyebrow">LEADERSHIP VIEW</p><h2>Team workload</h2><p className="muted">Current ownership and follow-up demand for every PIC.</p></div><span>Lead &amp; Head only</span></div>
     {error&&<p className="error">{error}</p>}
-    <div className="table-scroll"><table><thead><tr><th>Team member</th><th><Store/>Active merchants</th><th><BriefcaseBusiness/>Pending cases</th><th><BriefcaseBusiness/>Solved cases</th><th><CircleAlert/>Overdue cases</th><th><CalendarClock/>Upcoming meetings</th></tr></thead>
-      <tbody>{rows.map(row=><tr key={row.id}><td><b>{row.name}</b><small>{row.role}</small></td><td>{row.activeMerchants}</td><td>{row.pendingCases}</td><td>{row.solvedCases}</td><td><strong className={row.overdueCases?'workload-overdue':''}>{row.overdueCases}</strong></td><td>{row.upcomingMeetings}</td></tr>)}</tbody>
+    <div className="table-scroll"><table className="responsive-table"><thead><tr><th>Team member</th><th><Store/>Active merchants</th><th><BriefcaseBusiness/>Pending cases</th><th><BriefcaseBusiness/>Solved cases</th><th><CircleAlert/>Overdue cases</th><th><CalendarClock/>Upcoming meetings</th></tr></thead>
+      <tbody>{pagedRows.map(row=><tr key={row.id}><td data-label="Team member"><b>{row.name}</b><small>{row.role}</small></td><td data-label="Active merchants">{row.activeMerchants}</td><td data-label="Pending cases">{row.pendingCases}</td><td data-label="Solved cases">{row.solvedCases}</td><td data-label="Overdue cases"><strong className={row.overdueCases?'workload-overdue':''}>{row.overdueCases}</strong></td><td data-label="Upcoming meetings">{row.upcomingMeetings}</td></tr>)}</tbody>
     </table></div>
+    {!!rows.length&&<Pagination total={rows.length} page={safePage} pageSize={pageSize} onPage={setPage} onPageSize={size=>{setPageSize(size);setPage(1)}}/>}
   </section>;
 }

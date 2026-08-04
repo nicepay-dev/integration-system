@@ -1,15 +1,15 @@
 import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
 
-class LoginDto { @IsEmail() email:string; @IsString() @MinLength(6) password:string; }
+class LoginDto { @IsEmail() email:string; @IsString() @MinLength(6) password:string; @IsOptional() @IsBoolean() rememberMe?:boolean; }
 class ChangePasswordDto { @IsString() @MinLength(6) currentPassword:string; @IsString() @MinLength(8) newPassword:string; }
 
 @Controller('auth')
 export class AuthController {
   constructor(private auth:AuthService) {}
-  @Post('login') login(@Body() dto:LoginDto){return this.auth.login(dto.email,dto.password);}
+  @Post('login') login(@Body() dto:LoginDto){return this.auth.login(dto.email,dto.password,dto.rememberMe);}
   @UseGuards(AuthGuard('jwt')) @Get('me') me(@Req() request:any){return request.user;}
   @UseGuards(AuthGuard('jwt')) @Patch('password') changePassword(@Req() request:any,@Body() dto:ChangePasswordDto){return this.auth.changePassword(request.user.id,dto.currentPassword,dto.newPassword);}
 }

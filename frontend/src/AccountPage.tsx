@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, KeyRound, Save, ShieldCheck, UserCog, UserPlus, X } from 'lucide-react';
 import { api } from './api';
+import Pagination from './Pagination';
 
 type AccountUser={name:string;email:string;role:string};
 type ManagedUser={id:string;name:string;email:string;role:string};
@@ -33,8 +34,13 @@ export default function AccountPage({user,onUserCreated}:{user:AccountUser;onUse
   const [resetUser,setResetUser]=useState<ManagedUser|null>(null);
   const [resetPassword,setResetPassword]=useState('');
   const [resetConfirm,setResetConfirm]=useState('');
+  const [userPage,setUserPage]=useState(1);
+  const [userPageSize,setUserPageSize]=useState(20);
   const normalizedRole=user.role?.toLowerCase();
   const canManageUsers=managerPositions.has(normalizedRole)||/\b(lead|head)\b/i.test(normalizedRole||'');
+  const userPageCount=Math.max(1,Math.ceil(users.length/userPageSize));
+  const safeUserPage=Math.min(userPage,userPageCount);
+  const pagedUsers=users.slice((safeUserPage-1)*userPageSize,safeUserPage*userPageSize);
 
   async function loadUsers(){
     const data=await api('/users');
@@ -103,7 +109,8 @@ export default function AccountPage({user,onUserCreated}:{user:AccountUser;onUse
       </form>}
       {canManageUsers&&<section className="user-control-card"><div className="password-title"><UserCog/><div><h2>User control</h2><p className="muted">Update team positions or help a member who forgot their password.</p></div></div>
         {controlError&&<p className="error">{controlError}</p>}{controlSuccess&&<p className="success"><CheckCircle2/>{controlSuccess}</p>}
-        <div className="user-control-list">{users.map(member=><article key={member.id}><div className="managed-user"><b>{member.name}</b><small>{member.email}</small></div><select aria-label={`Position for ${member.name}`} value={roleDrafts[member.id]||member.role} onChange={event=>setRoleDrafts({...roleDrafts,[member.id]:event.target.value})}>{Object.entries(positions).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button type="button" className="save-position" disabled={savingUserId===member.id||roleDrafts[member.id]===member.role} onClick={()=>updatePosition(member)}><Save/>Save</button><button type="button" className="reset-password" onClick={()=>{setResetUser(member);setResetPassword('');setResetConfirm('');setControlError('');}}>Reset password</button></article>)}</div>
+        <div className="user-control-list">{pagedUsers.map(member=><article key={member.id}><div className="managed-user"><b>{member.name}</b><small>{member.email}</small></div><select aria-label={`Position for ${member.name}`} value={roleDrafts[member.id]||member.role} onChange={event=>setRoleDrafts({...roleDrafts,[member.id]:event.target.value})}>{Object.entries(positions).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button type="button" className="save-position" disabled={savingUserId===member.id||roleDrafts[member.id]===member.role} onClick={()=>updatePosition(member)}><Save/>Save</button><button type="button" className="reset-password" onClick={()=>{setResetUser(member);setResetPassword('');setResetConfirm('');setControlError('');}}>Reset password</button></article>)}</div>
+        {!!users.length&&<Pagination total={users.length} page={safeUserPage} pageSize={userPageSize} onPage={setUserPage} onPageSize={size=>{setUserPageSize(size);setUserPage(1)}}/>}
       </section>}
     </section>
     {resetUser&&<div className="overlay"><form className="modal reset-password-modal" onSubmit={resetMemberPassword}><button className="icon close" type="button" onClick={()=>setResetUser(null)}><X/></button><p className="eyebrow">USER ACCESS</p><h2>Reset password</h2><p className="muted">Set a temporary password for {resetUser.name}. Share it securely and ask them to change it after signing in.</p><label>New password<input required type="password" minLength={8} autoComplete="new-password" value={resetPassword} onChange={event=>setResetPassword(event.target.value)}/></label><label>Confirm password<input required type="password" minLength={8} autoComplete="new-password" value={resetConfirm} onChange={event=>setResetConfirm(event.target.value)}/></label>{controlError&&<p className="error">{controlError}</p>}<div className="actions"><button type="button" onClick={()=>setResetUser(null)}>Cancel</button><button className="primary" disabled={savingUserId===resetUser.id}><KeyRound/>{savingUserId===resetUser.id?'Resetting…':'Reset password'}</button></div></form></div>}

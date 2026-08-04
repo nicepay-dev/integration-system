@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Bell, ChevronRight, ClipboardCheck, Download, Plus, Search, Trash2, X } from 'lucide-react';
 import { api } from './api';
 import { downloadCsv } from './exportCsv';
+import Pagination from './Pagination';
 
 type Merchant={id:string;name:string;code:string};
 type Member={id:string;name:string;email:string;role:string};
@@ -70,6 +71,11 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
   const [editing,setEditing]=useState<CaseItem|null>(null);
   const [notifications,setNotifications]=useState<any[]>([]);
   const [bell,setBell]=useState(false);
+  const [page,setPage]=useState(1);
+  const [pageSize,setPageSize]=useState(20);
+  const pageCount=Math.max(1,Math.ceil(cases.length/pageSize));
+  const safePage=Math.min(page,pageCount);
+  const pagedCases=cases.slice((safePage-1)*pageSize,safePage*pageSize);
   const filteredMerchants=merchants.filter(item=>`${item.name} ${item.code}`.toLowerCase().includes(merchantFilter.toLowerCase())).slice(0,80);
   function setDatePreset(preset:'TODAY'|'LAST_7_DAYS'|'THIS_MONTH'){
     const end=new Date();
@@ -94,12 +100,14 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
     if(dateTo)params.set('dateTo',new Date(`${dateTo}T${timeTo||'23:59'}:59.999`).toISOString());
     const [caseData,notificationData]=await Promise.all([api(`/cases?${params}`),api('/notifications')]);
     setCases(caseData);
+    setPage(1);
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
   }
   async function clearFilters(){
     setSearch('');setStatus('ALL');setCategoryFilter('ALL');setPaymentMethodFilter('ALL');setPaymentAreaFilter('ALL');setMerchantId('ALL');setPicUserId('ALL');setMerchantFilter('');setDateFrom('');setDateTo('');setTimeFrom('');setTimeTo('');
     const [caseData,notificationData]=await Promise.all([api('/cases'),api('/notifications')]);
     setCases(caseData);
+    setPage(1);
     setNotifications(notificationData.filter((item:any)=>item.caseRecord));
   }
   useEffect(()=>{load()},[status,merchantId,picUserId]);
@@ -137,20 +145,21 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
           <div className="case-filter-buttons"><button className="clear-filter-button" type="button" onClick={clearFilters}>Clear</button><button className="filter-button" type="button" onClick={load}>Apply filters</button></div>
         </div>
       </div>
-      <div className="table-scroll"><table className="case-table">
+      <div className="table-scroll"><table className="case-table responsive-table">
         <thead><tr><th>Merchant name</th><th>Category</th><th>Action</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
-        <tbody>{cases.map(item=><tr key={item.id}>
-          <td><b>{item.merchant.name}</b></td>
-          <td><span>{categories[item.category]}</span>{item.paymentMethod&&<small className="case-payment-detail">{paymentMethods[item.paymentMethod]||item.paymentMethod} · {paymentAreas[item.paymentMethod]?.find(option=>option.value===item.paymentArea)?.label||item.paymentArea}</small>}</td>
-          <td><span className="case-update">{item.updateNote||'No action yet'}</span></td>
-          <td><span className="case-response">{item.response||'No response yet'}</span></td>
-          <td>{item.pic.name}</td>
-          <td>{new Date(item.createdAt).toLocaleDateString('en-GB')}</td>
-          <td>{new Date(item.updatedAt).toLocaleDateString('en-GB')}</td>
-          <td><span className={`case-status ${item.status.toLowerCase()}`}>{statuses[item.status]}</span></td>
-          <td><div className="row-actions"><button onClick={()=>setEditing(item)}>Update <ChevronRight/></button><button className="delete-action" title="Delete case" onClick={()=>deleteCase(item)}><Trash2/></button></div></td>
+        <tbody>{pagedCases.map(item=><tr key={item.id}>
+          <td data-label="Merchant"><b>{item.merchant.name}</b></td>
+          <td data-label="Category"><span>{categories[item.category]}</span>{item.paymentMethod&&<small className="case-payment-detail">{paymentMethods[item.paymentMethod]||item.paymentMethod} · {paymentAreas[item.paymentMethod]?.find(option=>option.value===item.paymentArea)?.label||item.paymentArea}</small>}</td>
+          <td data-label="Action"><span className="case-update">{item.updateNote||'No action yet'}</span></td>
+          <td data-label="Response"><span className="case-response">{item.response||'No response yet'}</span></td>
+          <td data-label="PIC">{item.pic.name}</td>
+          <td data-label="Created">{new Date(item.createdAt).toLocaleDateString('en-GB')}</td>
+          <td data-label="Updated">{new Date(item.updatedAt).toLocaleDateString('en-GB')}</td>
+          <td data-label="Status"><span className={`case-status ${item.status.toLowerCase()}`}>{statuses[item.status]}</span></td>
+          <td data-label="Actions"><div className="row-actions"><button onClick={()=>setEditing(item)}>Update <ChevronRight/></button><button className="delete-action" title="Delete case" onClick={()=>deleteCase(item)}><Trash2/></button></div></td>
         </tr>)}</tbody>
       </table></div>
+      {!!cases.length&&<Pagination total={cases.length} page={safePage} pageSize={pageSize} onPage={setPage} onPageSize={size=>{setPageSize(size);setPage(1)}}/>}
       {!cases.length&&<div className="empty"><ClipboardCheck/><p>No cases match the current filters.</p></div>}
     </section>
     {creating&&<CaseModal merchants={merchants} members={members} close={()=>setCreating(false)} saved={load}/>}
