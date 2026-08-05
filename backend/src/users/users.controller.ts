@@ -38,7 +38,7 @@ export class UsersController {
   @Get()
   async list() {
     const users = await this.users.find({ order: { name: 'ASC' } });
-    return users.map(({ id, name, email, role }) => ({ id, name, email, role }));
+    return users.map(({ id, name, email, role, standbyGroup }) => ({ id, name, email, role, standbyGroup }));
   }
 
   @Post()

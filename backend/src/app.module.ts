@@ -10,6 +10,7 @@ import { CasesModule } from './cases/cases.module';
 import { MeetingsModule } from './meetings/meetings.module';
 import { HealthController } from './health.controller';
 import { RequestLoggerMiddleware } from './request-logger.middleware';
+import { StandbyModule } from './standby/standby.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { RequestLoggerMiddleware } from './request-logger.middleware';
     CasesModule,
     MeetingsModule,
     NotificationsModule,
+    StandbyModule,
   ],
   controllers: [HealthController],
 })

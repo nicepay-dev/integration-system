@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Bell, CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Download, LayoutDashboard, LogOut, Pencil, Plus, Search, Store, Trash2, TrendingUp, UserRound, X } from 'lucide-react';
+import { AlertTriangle, Bell, CalendarCheck, CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Download, LayoutDashboard, LogOut, Pencil, Plus, RefreshCw, Search, Store, Trash2, TrendingUp, UserRound, X } from 'lucide-react';
 import { api } from './api';
 import CasesPage from './CasesPage';
 import HomeCharts from './HomeCharts';
@@ -10,11 +10,12 @@ import MeetingsPage from './MeetingsPage';
 import TeamWorkload from './TeamWorkload';
 import { downloadCsv } from './exportCsv';
 import Pagination from './Pagination';
+import StandbyPage from './StandbyPage';
 
 type MerchantMid = { mid:string; status:string; paymentMethods:string[]; paymentMethodStatuses:Record<string,string> };
 type Merchant = { id:string; name:string; code:string; mids:MerchantMid[]; picName:string|null; picEmail:string|null; paymentMethods:string[]; paymentMethodStatuses:Record<string,string>; techStacks:string[]; integrationTypes:string[]; status:string; progress:number; targetLiveDate?:string; notes?:string; statusUpdatedAt:string };
 type Summary = { total:number; live:number; blocked:number; stale:number; averageProgress:number };
-type Member = { id:string; name:string; email:string; role:string };
+type Member = { id:string; name:string; email:string; role:string; standbyGroup?:string|null };
 const labels:Record<string,string> = { ONBOARDING:'Onboarding', INTEGRATION:'Integration', UAT:'UAT', 'READY LIVE':'Ready Live', LIVE:'Live', BLOCKED:'Blocked', CANCEL:'Cancel' };
 const paymentOptions = ['CC','VA','CVS','Direct Debit','eWallet','Pay Later','Payout','QRIS'];
 const techOptions = ['JavaScript','TypeScript','Java','PHP','Python','Go','C#','Kotlin','Swift','React','Angular','Vue.js','Node.js','Express','NestJS','Laravel','Spring Boot','Django','.NET','WordPress','WooCommerce','Magento','Shopify','Drupal','Joomla','Odoo','WHMCS'];
@@ -152,6 +153,7 @@ export default function App() {
   const [summary, setSummary] = useState<Summary>({ total:0, live:0, blocked:0, stale:0, averageProgress:0 });
   const [notifications, setNotifications] = useState<any[]>([]);
   const [cases,setCases]=useState<any[]>([]);
+  const [standbyToday,setStandbyToday]=useState<any[]>([]);
   const [modal, setModal] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
@@ -161,13 +163,16 @@ export default function App() {
   const [selected, setSelected] = useState<Merchant|null>(null);
   const [editingMerchant,setEditingMerchant]=useState<Merchant|null>(null);
   const [bell, setBell] = useState(false);
-  const [page,setPage]=useState<'overview'|'merchants'|'merchant-detail'|'notifications'|'cases'|'meetings'|'account'>('overview');
+  const [page,setPage]=useState<'overview'|'merchants'|'merchant-detail'|'notifications'|'cases'|'meetings'|'standby'|'account'>('overview');
   const [detailMerchant,setDetailMerchant]=useState<Merchant|null>(null);
+  const [refreshVersion,setRefreshVersion]=useState(0);
+  const [refreshing,setRefreshing]=useState(false);
   const user = JSON.parse(localStorage.getItem('mp_user') || '{"name":"Technical Lead","role":"Integration"}');
   const canViewTeamWorkload=/\b(lead|head)\b/i.test(user.role||'');
   async function load() {
-    const [merchantData, summaryData, notificationData, memberData,caseData] = await Promise.all([api('/merchants'), api('/merchants/summary'), api('/notifications'), api('/users'),api('/cases')]);
-    setMerchants(merchantData); setSummary(summaryData); setNotifications(notificationData); setMembers(memberData); setCases(caseData);
+    const [merchantData, summaryData, notificationData, memberData,caseData,todayData] = await Promise.all([api('/merchants'), api('/merchants/summary'), api('/notifications'), api('/users'),api('/cases'),api('/standby/today')]);
+    setMerchants(merchantData); setSummary(summaryData); setNotifications(notificationData); setMembers(memberData); setCases(caseData);setStandbyToday(todayData);
+    setDetailMerchant(current=>current?(merchantData.find((merchant:Merchant)=>merchant.id===current.id)||current):null);
   }
   useEffect(() => { if (authed) load(); }, [authed]);
   if (!authed) return <Login done={()=>setAuthed(true)}/>;
@@ -177,6 +182,7 @@ export default function App() {
   const merchantPageCount=Math.max(1,Math.ceil(visible.length/merchantPageSize));
   const safeMerchantPage=Math.min(merchantPage,merchantPageCount);
   const pagedMerchants=visible.slice((safeMerchantPage-1)*merchantPageSize,safeMerchantPage*merchantPageSize);
+  const myStandby=standbyToday.find(item=>item.member?.email?.toLowerCase()===user.email?.toLowerCase());
   async function update(merchant:Merchant, status:string, progress:number, note:string, paymentMethodStatuses:Record<string,string>,midStatuses:Record<string,string>,midPaymentMethodStatuses:Record<string,Record<string,string>>,picUserId:string) {
     const updated=await api(`/merchants/${merchant.id}/progress`, { method:'PATCH', body:JSON.stringify({ status, progress, note, paymentMethodStatuses, midStatuses, midPaymentMethodStatuses, picUserId }) }); setSelected(null); if(detailMerchant?.id===updated.id)setDetailMerchant(updated); load();
   }
@@ -201,17 +207,23 @@ export default function App() {
     setDetailMerchant(merchant);
     setPage('merchant-detail');
   }
+  async function refreshData(){
+    if(refreshing)return;
+    setRefreshing(true);
+    try{await load();setRefreshVersion(version=>version+1)}finally{setRefreshing(false)}
+  }
   return <div className="app"><aside>
-    <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='merchants'||page==='merchant-detail'?'active':''} onClick={()=>setPage('merchants')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='notifications'?'active':''} onClick={()=>setPage('notifications')}><Bell/>Notifications</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a></nav>
+    <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='merchants'||page==='merchant-detail'?'active':''} onClick={()=>setPage('merchants')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='standby'?'active':''} onClick={()=>setPage('standby')}><CalendarCheck/>Standby</a><a className={page==='notifications'?'active':''} onClick={()=>setPage('notifications')}><Bell/>Notifications</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a><button className="nav-refresh" type="button" disabled={refreshing} onClick={refreshData}><RefreshCw className={refreshing?'spinning':''}/><span>{refreshing?'Refreshing…':'Refresh data'}</span></button></nav>
     <div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.removeItem('mp_token');localStorage.removeItem('mp_user');setAuthed(false)}}><LogOut/></button></div>
   </aside>{page==='overview'?<main className="content">
     <header><div><p className="eyebrow">INTEGRATION OVERVIEW</p><h1>{greeting()}, {user.name?.split(' ')[0]}.</h1><p className="muted">Here’s what needs your attention across merchant integrations.</p></div>
       <div className="header-actions"><button aria-label="Notifications" className="bell icon" onClick={()=>setBell(!bell)}><Bell/><em>{notifications.filter(item=>!item.isRead).length}</em></button></div>
       {bell&&<div className="notification-pop"><h3>Notifications</h3>{notifications.length?notifications.slice(0,5).map(item=><div className={item.isRead?'':'unread'} key={item.id}><AlertTriangle/><span>{item.message}<small>{new Date(item.createdAt).toLocaleDateString()}</small></span></div>):<p className="muted">You’re all caught up.</p>}</div>}
     </header>
+    {myStandby&&<section className="today-standby"><CalendarCheck/><div><b>{greeting()}, {user.name?.split(' ')[0]}. Today is your standby schedule.</b><p>You are assigned for {myStandby.groupName==='GROUP_1'?'Group 1':'Group 2'}. Please stay available during working hours.</p></div></section>}
     <section className="attention"><div className="attention-icon"><AlertTriangle/></div><div><b>{summary.stale} merchants need a progress update</b><p>No status changes for 7 days or more. Follow up to keep timelines on track.</p></div><button onClick={()=>setPage('merchants')}>Review now <ChevronRight/></button></section>
     <HomeCharts merchants={merchants} cases={cases} notifications={notifications}/>
-    {canViewTeamWorkload&&<TeamWorkload members={members} merchants={merchants} cases={cases}/>}
+    {canViewTeamWorkload&&<TeamWorkload key={refreshVersion} members={members} merchants={merchants} cases={cases}/>} 
   </main>:page==='merchants'?<main className="content merchants-page">
     <header><div><p className="eyebrow">MERCHANT OPERATIONS</p><h1>Merchants</h1><p className="muted">Create merchants, manage integration progress, and maintain MID payment methods.</p></div><div className="header-actions"><button className="primary" onClick={()=>setModal(true)}><Plus/>Add merchant</button></div></header>
     <section className="stats merchant-kpis"><article><span>Total merchants</span><b>{summary.total}</b><small><TrendingUp/> Active portfolio</small></article><article><span>Average progress</span><b>{summary.averageProgress}%</b><small>Across all integrations</small></article><article><span>Live merchants</span><b>{summary.live}</b><small><CheckCircle2/> Successfully launched</small></article><article><span>Integration process</span><b>{merchants.filter(merchant=>merchant.status==='INTEGRATION').length}</b><small>Currently integrating</small></article><article><span>Blocked</span><b>{summary.blocked}</b><small className="danger">Needs intervention</small></article><article><span>Cancelled</span><b>{merchants.filter(merchant=>merchant.status==='CANCEL').length}</b><small>Integration discontinued</small></article></section>
@@ -238,5 +250,5 @@ export default function App() {
       {!!visible.length&&<Pagination total={visible.length} page={safeMerchantPage} pageSize={merchantPageSize} onPage={setMerchantPage} onPageSize={size=>{setMerchantPageSize(size);setMerchantPage(1)}}/>}
       {!visible.length&&<div className="empty">No merchants match your filters.</div>}
     </section>
-  </main>:page==='merchant-detail'&&detailMerchant?<MerchantDetailPage merchant={detailMerchant} onBack={()=>setPage('merchants')} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onProgress={()=>setSelected(detailMerchant)}/>:page==='notifications'?<NotificationsPage onMerchant={openMerchantDetail} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onChanged={load}/>:page==='cases'?<CasesPage merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage merchants={merchants} members={members}/>:<AccountPage user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
+  </main>:page==='merchant-detail'&&detailMerchant?<MerchantDetailPage key={`${detailMerchant.id}-${refreshVersion}`} merchant={detailMerchant} onBack={()=>setPage('merchants')} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onProgress={()=>setSelected(detailMerchant)}/>:page==='notifications'?<NotificationsPage key={refreshVersion} onMerchant={openMerchantDetail} onCases={()=>setPage('cases')} onMeetings={()=>setPage('meetings')} onChanged={load}/>:page==='cases'?<CasesPage key={refreshVersion} merchants={merchants} members={members}/>:page==='meetings'?<MeetingsPage key={refreshVersion} merchants={merchants} members={members}/>:page==='standby'?<StandbyPage key={refreshVersion} members={members} onMembersChanged={load}/>:<AccountPage key={refreshVersion} user={user} onUserCreated={load}/>} {modal&&<NewMerchant close={()=>setModal(false)} saved={load} members={members}/>} {editingMerchant&&<NewMerchant existing={editingMerchant} close={()=>setEditingMerchant(null)} saved={load} members={members}/>} {selected&&<Update merchant={selected} members={members} close={()=>setSelected(null)} save={update}/>}</div>;
 }

@@ -14,4 +14,7 @@ import './details-notifications.css';
 import './team-workload.css';
 import './pagination.css';
 import './remember-me.css';
+import './refresh.css';
+import './standby.css';
+import './standby-holidays.css';
 createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
