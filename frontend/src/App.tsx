@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Bell, CalendarCheck, CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Download, LayoutDashboard, LogOut, Pencil, Plus, RefreshCw, Search, Store, Trash2, TrendingUp, UserRound, X } from 'lucide-react';
+import { AlertTriangle, Bell, CalendarCheck, CalendarDays, CheckCircle2, ChevronRight, ClipboardCheck, Download, LayoutDashboard, LogOut, Palette, Pencil, Plus, RefreshCw, Search, Store, Trash2, TrendingUp, UserRound, X } from 'lucide-react';
 import { api } from './api';
 import CasesPage from './CasesPage';
 import HomeCharts from './HomeCharts';
@@ -16,6 +16,7 @@ type MerchantMid = { mid:string; status:string; paymentMethods:string[]; payment
 type Merchant = { id:string; name:string; code:string; mids:MerchantMid[]; picName:string|null; picEmail:string|null; paymentMethods:string[]; paymentMethodStatuses:Record<string,string>; techStacks:string[]; integrationTypes:string[]; status:string; progress:number; targetLiveDate?:string; notes?:string; statusUpdatedAt:string };
 type Summary = { total:number; live:number; blocked:number; stale:number; averageProgress:number };
 type Member = { id:string; name:string; email:string; role:string; standbyGroup?:string|null };
+type ThemeChoice='light'|'ocean'|'emerald'|'purple'|'coral'|'amber'|'rose'|'indigo'|'forest'|'graphite'|'dark'|'system';
 const labels:Record<string,string> = { ONBOARDING:'Onboarding', INTEGRATION:'Integration', UAT:'UAT', 'READY LIVE':'Ready Live', LIVE:'Live', BLOCKED:'Blocked', CANCEL:'Cancel' };
 const paymentOptions = ['CC','VA','CVS','Direct Debit','eWallet','Pay Later','Payout','QRIS'];
 const techOptions = ['JavaScript','TypeScript','Java','PHP','Python','Go','C#','Kotlin','Swift','React','Angular','Vue.js','Node.js','Express','NestJS','Laravel','Spring Boot','Django','.NET','WordPress','WooCommerce','Magento','Shopify','Drupal','Joomla','Odoo','WHMCS'];
@@ -47,7 +48,7 @@ function Login({ done }:{ done:()=>void }) {
     } catch (error) { setError((error as Error).message); } finally { setLoading(false); }
   }
   return <main className="login"><section className="login-art">
-    <div className="brand"><i>NI</i><span>Nicepay Integration</span></div>
+    <div className="brand"><img src="/nicepay-logo.jpg" alt="Nicepay"/><span>Nicepay Integration</span></div>
     <div><p className="eyebrow">INTEGRATION COMMAND CENTER</p><h1>Keep every merchant<br/>moving forward.</h1><p>One clear view of onboarding, integration progress, blockers, and follow-ups.</p></div>
     <div className="quote">“Clarity turns complex integrations into predictable launches.”</div>
   </section><section className="login-panel"><form onSubmit={submit} autoComplete="off">
@@ -147,6 +148,7 @@ function Update({ merchant, members, close, save }:{ merchant:Merchant; members:
 }
 
 export default function App() {
+  const [theme,setTheme]=useState<ThemeChoice>(()=>(localStorage.getItem('mp_theme') as ThemeChoice)||'light');
   const [authed, setAuthed] = useState(!!localStorage.getItem('mp_token'));
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -169,6 +171,7 @@ export default function App() {
   const [refreshing,setRefreshing]=useState(false);
   const user = JSON.parse(localStorage.getItem('mp_user') || '{"name":"Technical Lead","role":"Integration"}');
   const canViewTeamWorkload=/\b(lead|head)\b/i.test(user.role||'');
+  useEffect(()=>{const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{const resolved=theme==='system'?(media.matches?'dark':'light'):theme==='dark'?'dark':'light';document.documentElement.dataset.theme=resolved;document.documentElement.dataset.accent=['ocean','emerald','purple','coral','amber','rose','indigo','forest','graphite'].includes(theme)?theme:'nicepay';document.documentElement.dataset.themeChoice=theme;localStorage.setItem('mp_theme',theme)};apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply)},[theme]);
   async function load() {
     const [merchantData, summaryData, notificationData, memberData,caseData,todayData] = await Promise.all([api('/merchants'), api('/merchants/summary'), api('/notifications'), api('/users'),api('/cases'),api('/standby/today')]);
     setMerchants(merchantData); setSummary(summaryData); setNotifications(notificationData); setMembers(memberData); setCases(caseData);setStandbyToday(todayData);
@@ -213,8 +216,8 @@ export default function App() {
     try{await load();setRefreshVersion(version=>version+1)}finally{setRefreshing(false)}
   }
   return <div className="app"><aside>
-    <div className="brand"><i>NI</i><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='merchants'||page==='merchant-detail'?'active':''} onClick={()=>setPage('merchants')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='standby'?'active':''} onClick={()=>setPage('standby')}><CalendarCheck/>Standby</a><a className={page==='notifications'?'active':''} onClick={()=>setPage('notifications')}><Bell/>Notifications</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a><button className="nav-refresh" type="button" disabled={refreshing} onClick={refreshData}><RefreshCw className={refreshing?'spinning':''}/><span>{refreshing?'Refreshing…':'Refresh data'}</span></button></nav>
-    <div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.removeItem('mp_token');localStorage.removeItem('mp_user');setAuthed(false)}}><LogOut/></button></div>
+    <div className="brand"><img src="/nicepay-logo.jpg" alt="Nicepay"/><span>Nicepay<br/>Integration</span></div><nav><a className={page==='overview'?'active':''} onClick={()=>setPage('overview')}><LayoutDashboard/>Overview</a><a className={page==='merchants'||page==='merchant-detail'?'active':''} onClick={()=>setPage('merchants')}><Store/>Merchants</a><a className={page==='cases'?'active':''} onClick={()=>setPage('cases')}><ClipboardCheck/>Case checking</a><a className={page==='meetings'?'active':''} onClick={()=>setPage('meetings')}><CalendarDays/>Meetings</a><a className={page==='standby'?'active':''} onClick={()=>setPage('standby')}><CalendarCheck/>Standby</a><a className={page==='notifications'?'active':''} onClick={()=>setPage('notifications')}><Bell/>Notifications</a><a className={page==='account'?'active':''} onClick={()=>setPage('account')}><UserRound/>Account</a><button className="nav-refresh" type="button" disabled={refreshing} onClick={refreshData}><RefreshCw className={refreshing?'spinning':''}/><span>{refreshing?'Refreshing…':'Refresh data'}</span></button></nav>
+    <div className="theme-picker"><Palette/><label><span>Theme</span><select aria-label="Application theme" value={theme} onChange={event=>setTheme(event.target.value as ThemeChoice)}><option value="light">Nicepay</option><option value="ocean">Ocean blue</option><option value="emerald">Emerald</option><option value="purple">Purple</option><option value="coral">Coral</option><option value="amber">Amber</option><option value="rose">Rose</option><option value="indigo">Indigo</option><option value="forest">Forest</option><option value="graphite">Graphite</option><option value="dark">Dark</option><option value="system">System</option></select></label></div><div className="aside-foot"><div className="avatar">{user.name?.split(' ').map((part:string)=>part[0]).join('').slice(0,2)}</div><div><b>{user.name}</b><small>{user.role || 'Integration'}</small></div><button aria-label="Sign out" className="icon" onClick={()=>{localStorage.removeItem('mp_token');localStorage.removeItem('mp_user');setAuthed(false)}}><LogOut/></button></div>
   </aside>{page==='overview'?<main className="content">
     <header><div><p className="eyebrow">INTEGRATION OVERVIEW</p><h1>{greeting()}, {user.name?.split(' ')[0]}.</h1><p className="muted">Here’s what needs your attention across merchant integrations.</p></div>
       <div className="header-actions"><button aria-label="Notifications" className="bell icon" onClick={()=>setBell(!bell)}><Bell/><em>{notifications.filter(item=>!item.isRead).length}</em></button></div>
