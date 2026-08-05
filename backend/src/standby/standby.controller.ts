@@ -13,5 +13,5 @@ export class StandbyController {
   @Delete('holidays/:id') removeHoliday(@Param('id') id:string,@Req() request:any){this.manager(request);return this.service.removeHoliday(id)}
   @Patch('groups') groups(@Body() dto:UpdateStandbyGroupsDto,@Req() request:any){this.manager(request);return this.service.updateGroups(dto)}
   @Post('generate') generate(@Body() dto:GenerateStandbyDto,@Req() request:any){this.manager(request);return this.service.generate(dto)}
-  private manager(request:any){if(!/\b(lead|head)\b/i.test(request.user?.role||''))throw new ForbiddenException('Only Lead and Head roles can manage standby schedules')}
+  private manager(request:any){if(!/\blead\b/i.test(request.user?.role||''))throw new ForbiddenException('Only Lead roles can manage standby schedules')}
 }

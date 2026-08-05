@@ -10,7 +10,7 @@ const todayJakarta=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Jakarta',
 
 export default function StandbyPage({members,onMembersChanged}:{members:Member[];onMembersChanged:()=>void}){
   const user=JSON.parse(localStorage.getItem('mp_user')||'{"role":""}');
-  const canManage=/\b(lead|head)\b/i.test(user.role||'');
+  const canManage=/\blead\b/i.test(user.role||'');
   const staffMembers=useMemo(()=>members.filter(member=>/\bstaff\b/i.test(member.role||'')),[members]);
   const [month,setMonth]=useState(currentMonth());
   const [items,setItems]=useState<Schedule[]>([]);
