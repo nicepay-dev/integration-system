@@ -8,6 +8,7 @@ import { MerchantMid } from './merchant-mid.entity';
 import { Merchant, MerchantStatus } from './merchant.entity';
 import { PaymentMethodStatus } from './payment-method-status';
 import { ProgressUpdate } from './progress-update.entity';
+import { MerchantHistory } from './merchant-history.entity';
 
 type NormalizedMid={
   mid:string;
@@ -26,6 +27,7 @@ export class MerchantsService {
     @InjectRepository(MerchantMid) private merchantMids:Repository<MerchantMid>,
     @InjectRepository(MerchantMidPaymentMethod) private midPaymentMethods:Repository<MerchantMidPaymentMethod>,
     @InjectRepository(ProgressUpdate) private updates:Repository<ProgressUpdate>,
+    @InjectRepository(MerchantHistory) private history:Repository<MerchantHistory>,
     @InjectRepository(User) private users:Repository<User>,
   ) {}
 
@@ -44,7 +46,7 @@ export class MerchantsService {
     return this.toResponse(await this.oneEntity(id,true));
   }
 
-  async create(dto:CreateMerchantDto) {
+  async create(dto:CreateMerchantDto,by:string) {
     const pic=dto.picUserId?await this.users.findOneBy({id:dto.picUserId}):null;
     if(dto.picUserId&&!pic)throw new NotFoundException('Selected PIC was not found');
     const mids=this.normalizeMids(dto.mids,dto.code,dto.paymentMethods,[],MerchantStatus.ONBOARDING);
@@ -58,11 +60,12 @@ export class MerchantsService {
     }));
     await this.syncMids(merchant,mids);
     merchant=await this.oneEntity(merchant.id);
-    return this.toResponse(merchant);
+    const response=this.toResponse(merchant);await this.recordHistory(merchant.id,merchant.name,'CREATED',by,{},this.auditSnapshot(response));return response;
   }
 
   async updateProgress(id:string,dto:UpdateProgressDto,by:string) {
     const merchant=await this.oneEntity(id);
+    const before=this.auditSnapshot(this.toResponse(merchant));
     if(dto.picUserId!==undefined){
       const pic=dto.picUserId?await this.users.findOneBy({id:dto.picUserId}):null;
       if(dto.picUserId&&!pic)throw new NotFoundException('Selected PIC was not found');
@@ -85,11 +88,12 @@ export class MerchantsService {
     }
     await this.merchants.save(merchant);
     await this.updates.save(this.updates.create({merchant,status:dto.status,progress:dto.progress,note:dto.note||null,updatedBy:by}));
-    return this.one(id);
+    const response=await this.one(id);await this.recordHistory(id,response.name,'PROGRESS_UPDATED',by,before,this.auditSnapshot(response));return response;
   }
 
-  async update(id:string,dto:UpdateMerchantDto) {
+  async update(id:string,dto:UpdateMerchantDto,by:string) {
     let merchant=await this.oneEntity(id);
+    const before=this.auditSnapshot(this.toResponse(merchant));
     const changes:Partial<Merchant>={};
     if(dto.picUserId!==undefined){
       const pic=dto.picUserId?await this.users.findOneBy({id:dto.picUserId}):null;
@@ -113,15 +117,20 @@ export class MerchantsService {
     if(dto.notes!==undefined)changes.notes=dto.notes.trim()||null;
     if(Object.keys(changes).length)await this.merchants.update(id,changes);
     merchant=await this.oneEntity(id);
-    return this.toResponse(merchant);
+    const response=this.toResponse(merchant);await this.recordHistory(id,merchant.name,'UPDATED',by,before,this.auditSnapshot(response));return response;
   }
 
-  async remove(id:string) {
+  async remove(id:string,by:string) {
     const merchant=await this.merchants.findOneBy({id});
     if(!merchant)throw new NotFoundException('Merchant not found');
-    await this.merchants.remove(merchant);
+    await this.recordHistory(id,merchant.name,'DELETED',by,this.auditSnapshot(this.toResponse(await this.oneEntity(id))),{});await this.merchants.remove(merchant);
     return {ok:true,message:`${merchant.name} was deleted`};
   }
+
+  historyFor(id:string){return this.history.find({where:{merchantId:id},order:{createdAt:'DESC'}});}
+
+  private auditSnapshot(merchant:any){return{name:merchant.name,code:merchant.code,picName:merchant.picName,picEmail:merchant.picEmail,status:merchant.status,progress:merchant.progress,techStacks:merchant.techStacks,integrationTypes:merchant.integrationTypes,targetLiveDate:merchant.targetLiveDate,notes:merchant.notes,mids:merchant.mids};}
+  private async recordHistory(id:string,name:string,action:string,by:string,before:Record<string,unknown>,after:Record<string,unknown>){const changes:Record<string,{from:unknown;to:unknown}>={};for(const key of new Set([...Object.keys(before),...Object.keys(after)])){const from=before[key]??null,to=after[key]??null;if(JSON.stringify(from)!==JSON.stringify(to))changes[key]={from,to};}if(Object.keys(changes).length)await this.history.save(this.history.create({merchantId:id,merchantName:name,action,changedBy:by,changes}));}
 
   async summary() {
     const all=await this.merchants.find();

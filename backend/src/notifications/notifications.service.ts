@@ -59,7 +59,7 @@ export class NotificationsService implements OnModuleInit {
     const cases=await this.cases.find({where:{updatedAt:LessThanOrEqual(cutoff),status:Not(CaseStatus.SOLVED)}});
     for(const caseRecord of cases){
       const staleKey=`case:${caseRecord.id}:${new Date(caseRecord.updatedAt).toISOString()}`;
-      if(!await this.notifications.exists({where:{staleKey}})) await this.notifications.save(this.notifications.create({merchant:null,caseRecord,staleKey,message:`Case for ${caseRecord.merchant.name} has not been updated or solved for 2+ days.`}));
+      if(!await this.notifications.exists({where:{staleKey}})) await this.notifications.save(this.notifications.create({merchant:null,caseRecord,staleKey,message:`Case for ${caseRecord.merchant?.name||'Internal — Merchant notice'} has not been updated or solved for 2+ days.`}));
     }
   }
 

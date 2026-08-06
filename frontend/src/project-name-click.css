@@ -1,0 +1,2 @@
+.library-table tbody td:first-child b{cursor:pointer;color:var(--accent,#168d95)}.library-table tbody td:first-child b:hover{text-decoration:underline}
+.case-detail-link{border:0;padding:0;background:transparent;color:var(--accent,#168d95);font:inherit;font-weight:800;text-align:left;cursor:pointer}.case-detail-link:hover{text-decoration:underline}

@@ -1,8 +1,9 @@
 import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { CaseStatus, IssueCategory } from './case.entity';
+import { CaseSource, CaseStatus, IssueCategory } from './case.entity';
 
 export class CreateCaseDto {
-  @IsUUID() merchantId:string;
+  @IsOptional() @IsUUID() merchantId?:string;
+  @IsOptional() @IsEnum(CaseSource) source?:CaseSource;
   @IsString() issue:string;
   @IsEnum(IssueCategory) category:IssueCategory;
   @IsOptional() @IsString() paymentMethod?:string;

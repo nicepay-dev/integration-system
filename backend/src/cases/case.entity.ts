@@ -9,6 +9,11 @@ export enum CaseStatus {
   SOLVED = 'SOLVED',
 }
 
+export enum CaseSource {
+  MERCHANT = 'MERCHANT',
+  INTERNAL = 'INTERNAL',
+}
+
 export enum IssueCategory {
   PAYMENT = 'PAYMENT',
   INTEGRATION_API = 'INTEGRATION_API',
@@ -21,7 +26,8 @@ export enum IssueCategory {
 @Entity('cases')
 export class CaseRecord {
   @PrimaryGeneratedColumn('uuid') id:string;
-  @ManyToOne(()=>Merchant,{eager:true,onDelete:'CASCADE'}) merchant:Merchant;
+  @Column({type:'enum',enum:CaseSource,default:CaseSource.MERCHANT}) source:CaseSource;
+  @ManyToOne(()=>Merchant,{eager:true,onDelete:'CASCADE',nullable:true}) merchant:Merchant|null;
   @Column({type:'text'}) issue:string;
   @Column({type:'enum',enum:IssueCategory}) category:IssueCategory;
   @Column({type:'varchar',nullable:true}) paymentMethod:string|null;

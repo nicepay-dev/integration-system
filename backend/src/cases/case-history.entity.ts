@@ -1,0 +1,2 @@
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+@Entity('case_history') export class CaseHistory { @PrimaryGeneratedColumn('uuid') id:string; @Column({type:'uuid'}) caseId:string; @Column() caseLabel:string; @Column() action:string; @Column() changedBy:string; @Column({type:'jsonb',default:()=>"'{}'::jsonb"}) changes:Record<string,{from:unknown;to:unknown}>; @CreateDateColumn() createdAt:Date; }

@@ -9,7 +9,8 @@ export default function MerchantDetailPage({merchant,onBack,onCases,onMeetings,o
   const [cases,setCases]=useState<any[]>([]);
   const [meetings,setMeetings]=useState<any[]>([]);
   const [notifications,setNotifications]=useState<any[]>([]);
-  useEffect(()=>{Promise.all([api(`/cases?merchantId=${merchant.id}`),api(`/meetings?merchantId=${merchant.id}`),api('/notifications')]).then(([caseData,meetingData,notificationData])=>{setCases(caseData);setMeetings(meetingData);setNotifications(notificationData)})},[merchant.id]);
+  const [history,setHistory]=useState<any[]>([]);
+  useEffect(()=>{Promise.all([api(`/cases?merchantId=${merchant.id}`),api(`/meetings?merchantId=${merchant.id}`),api('/notifications'),api(`/merchants/${merchant.id}/history`)]).then(([caseData,meetingData,notificationData,historyData])=>{setCases(caseData);setMeetings(meetingData);setNotifications(notificationData);setHistory(historyData)})},[merchant.id]);
   const relatedNotifications=useMemo(()=>{
     const meetingIds=new Set(meetings.map(item=>item.id));
     return notifications.filter(item=>item.merchant?.id===merchant.id||item.caseRecord?.merchant?.id===merchant.id||(item.staleKey?.startsWith('meeting:')&&meetingIds.has(item.staleKey.split(':')[1])));
@@ -28,5 +29,6 @@ export default function MerchantDetailPage({merchant,onBack,onCases,onMeetings,o
       <section className="detail-section"><div className="detail-title"><div><p className="eyebrow">MEETINGS</p><h2>Meeting history</h2></div><button onClick={onMeetings}>Open meetings <ChevronRight/></button></div>{meetings.length?<div className="detail-list">{meetings.slice(0,6).map(item=><article key={item.id}><div><b>{item.meetingType.replaceAll('_',' ')}</b><small>{item.pic.name} · {new Date(item.meetingDate).toLocaleString('en-GB')}</small></div></article>)}</div>:<p className="detail-empty">No meetings recorded.</p>}</section>
     </div>
     <section className="detail-section"><div className="detail-title"><div><p className="eyebrow">ATTENTION</p><h2>Related notifications</h2></div><Bell/></div>{relatedNotifications.length?<div className="detail-list">{relatedNotifications.slice(0,8).map(item=><article className={item.isRead?'':'unread'} key={item.id}><div><b>{item.message}</b><small>{new Date(item.createdAt).toLocaleString('en-GB')}</small></div></article>)}</div>:<p className="detail-empty">No notifications for this merchant.</p>}</section>
+    <section className="detail-section"><div className="detail-title"><div><p className="eyebrow">AUDIT TRAIL</p><h2>Merchant change history</h2></div></div>{history.length?<div className="detail-list audit-history">{history.map(item=><article key={item.id}><div><b>{item.action.replaceAll('_',' ')}</b><small>{item.changedBy} · {new Date(item.createdAt).toLocaleString('en-GB')}</small><p>{Object.keys(item.changes).join(', ')}</p></div></article>)}</div>:<p className="detail-empty">No recorded changes yet.</p>}</section>
   </main>;
 }

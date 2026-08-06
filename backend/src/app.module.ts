@@ -11,6 +11,7 @@ import { MeetingsModule } from './meetings/meetings.module';
 import { HealthController } from './health.controller';
 import { RequestLoggerMiddleware } from './request-logger.middleware';
 import { StandbyModule } from './standby/standby.module';
+import { ProjectLibraryModule } from './project-library/project-library.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { StandbyModule } from './standby/standby.module';
     MeetingsModule,
     NotificationsModule,
     StandbyModule,
+    ProjectLibraryModule,
   ],
   controllers: [HealthController],
 })

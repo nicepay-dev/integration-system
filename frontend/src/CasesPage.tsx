@@ -6,7 +6,8 @@ import Pagination from './Pagination';
 
 type Merchant={id:string;name:string;code:string};
 type Member={id:string;name:string;email:string;role:string};
-type CaseItem={id:string;merchant:Merchant;issue:string;category:string;paymentMethod?:string;paymentArea?:string;response?:string;updateNote?:string;pic:Member;acrTicket?:string;status:string;createdBy:string;createdAt:string;updatedAt:string};
+type CaseItem={id:string;source:'MERCHANT'|'INTERNAL';merchant:Merchant|null;issue:string;category:string;paymentMethod?:string;paymentArea?:string;response?:string;updateNote?:string;pic:Member;acrTicket?:string;status:string;createdBy:string;createdAt:string;updatedAt:string};
+const caseOwner=(item:CaseItem)=>item.merchant?.name||'Internal — Merchant notice';
 const statuses:Record<string,string>={CHECKING:'Checking',WAITING_PARTNER:'Waiting from partner',WAITING_MERCHANT:'Waiting from merchant',SOLVED:'Solved'};
 const categories:Record<string,string>={PAYMENT:'Payment',INTEGRATION_API:'Integration / API',SETTLEMENT_RECONCILIATION:'Settlement / Reconciliation',DASHBOARD_ACCESS:'Dashboard / Access',CONFIGURATION:'Configuration',OTHER:'Other'};
 const paymentMethods:Record<string,string>={CREDIT_CARD:'Credit Card',VA:'VA',CVS:'CVS',DIRECT_DEBIT:'Direct Debit',EWALLET:'eWallet',PAYLOAN:'Payloan',PAYOUT:'Payout',QRIS:'QRIS'};
@@ -25,10 +26,12 @@ const inputDate=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).
 
 function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[];members:Member[];existing?:CaseItem|null;close:()=>void;saved:()=>void}) {
   const loggedInUser=JSON.parse(localStorage.getItem('mp_user')||'{"name":"Current user","email":""}');
-  const [merchantQuery,setMerchantQuery]=useState(existing?.merchant.name||'');
-  const [form,setForm]=useState({merchantId:existing?.merchant.id||'',issue:existing?.issue||'',category:existing?.category||'PAYMENT',paymentMethod:existing?.paymentMethod||'CREDIT_CARD',paymentArea:existing?.paymentArea||'REGISTER',response:existing?.response||'',updateNote:existing?.updateNote||'',picUserId:existing?.pic.id||members[0]?.id||'',acrTicket:existing?.acrTicket||'',status:existing?.status||'CHECKING'});
+  const [merchantQuery,setMerchantQuery]=useState(existing?.merchant?.name||'');
+  const [form,setForm]=useState({source:existing?.source||'MERCHANT',merchantId:existing?.merchant?.id||'',issue:existing?.issue||'',category:existing?.category||'PAYMENT',paymentMethod:existing?.paymentMethod||'CREDIT_CARD',paymentArea:existing?.paymentArea||'REGISTER',response:existing?.response||'',updateNote:existing?.updateNote||'',picUserId:existing?.pic.id||members[0]?.id||'',acrTicket:existing?.acrTicket||'',status:existing?.status||'CHECKING'});
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
+  const [history,setHistory]=useState<any[]>([]);
+  useEffect(()=>{if(existing)api(`/cases/${existing.id}/history`).then(setHistory)},[existing?.id]);
   const filtered=useMemo(()=>merchants.filter(item=>`${item.name} ${item.code}`.toLowerCase().includes(merchantQuery.toLowerCase())).slice(0,80),[merchants,merchantQuery]);
   const set=(key:string,value:string)=>setForm({...form,[key]:value});
   const setCategory=(value:string)=>setForm({...form,category:value,paymentMethod:value==='PAYMENT'?(form.paymentMethod||'CREDIT_CARD'):'',paymentArea:value==='PAYMENT'?(form.paymentArea||'REGISTER'):''});
@@ -37,19 +40,21 @@ function CaseModal({merchants,members,existing,close,saved}:{merchants:Merchant[
     event.preventDefault();setBusy(true);setError('');
     try{
       if(existing) await api(`/cases/${existing.id}`,{method:'PATCH',body:JSON.stringify({response:form.response,action:form.updateNote,picUserId:form.picUserId,acrTicket:form.acrTicket,status:form.status})});
-      else await api('/cases',{method:'POST',body:JSON.stringify({merchantId:form.merchantId,issue:form.issue,category:form.category,paymentMethod:form.category==='PAYMENT'?form.paymentMethod:undefined,paymentArea:form.category==='PAYMENT'?form.paymentArea:undefined,response:form.response,action:form.updateNote,acrTicket:form.acrTicket,status:form.status})});
+      else await api('/cases',{method:'POST',body:JSON.stringify({source:form.source,merchantId:form.source==='MERCHANT'?form.merchantId:undefined,issue:form.issue,category:form.category,paymentMethod:form.category==='PAYMENT'?form.paymentMethod:undefined,paymentArea:form.category==='PAYMENT'?form.paymentArea:undefined,response:form.response,action:form.updateNote,acrTicket:form.acrTicket,status:form.status})});
       saved();close();
     }catch(error){setError((error as Error).message);setBusy(false);}
   }
-  return <div className="overlay"><form className="modal case-modal" onSubmit={submit}>
-    <button className="icon close" type="button" onClick={close}><X/></button><p className="eyebrow">{existing?'UPDATE CASE':'NEW CASE'}</p><h2>{existing?existing.merchant.name:'Record merchant issue'}</h2>
+  return <div className="overlay"><form className="modal case-modal" noValidate onSubmit={submit}>
+    <button className="icon close" type="button" onClick={close}><X/></button><p className="eyebrow">{existing?'UPDATE CASE':'NEW CASE'}</p><h2>{existing?caseOwner(existing):'Record a new issue'}</h2>
+    {!existing&&<><fieldset><legend>Case source</legend><div className="category-radios source-radios"><label><input type="radio" checked={form.source==='MERCHANT'} onChange={()=>setForm({...form,source:'MERCHANT'})}/><span>Merchant</span></label><label><input type="radio" checked={form.source==='INTERNAL'} onChange={()=>setForm({...form,source:'INTERNAL',merchantId:''})}/><span>Internal</span></label></div></fieldset>{form.source==='INTERNAL'&&<div className="internal-case-notice"><b>Internal — Merchant notice</b><p>No merchant name is required for this case.</p></div>}</>}
     {!existing&&<><label>Find merchant<input placeholder="Type merchant name or code" value={merchantQuery} onChange={event=>setMerchantQuery(event.target.value)}/></label><label>Merchant<select required value={form.merchantId} onChange={event=>set('merchantId',event.target.value)}><option value="">Select merchant</option>{filtered.map(merchant=><option key={merchant.id} value={merchant.id}>{merchant.name} — {merchant.code}</option>)}</select></label><label>Issue<textarea required rows={4} value={form.issue} onChange={event=>set('issue',event.target.value)} placeholder="Describe what happened and the impact"/></label><fieldset><legend>Issue category</legend><div className="category-radios">{Object.entries(categories).map(([value,label])=><label key={value}><input type="radio" name="category" value={value} checked={form.category===value} onChange={()=>setCategory(value)}/><span>{label}</span></label>)}</div></fieldset>{form.category==='PAYMENT'&&<fieldset className="payment-details"><legend>Payment details</legend><div className="grid2"><label>Payment method<select required value={form.paymentMethod} onChange={event=>setPaymentMethod(event.target.value)}>{Object.entries(paymentMethods).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><label>Specific area<select required value={form.paymentArea} onChange={event=>set('paymentArea',event.target.value)}>{paymentAreas[form.paymentMethod].map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label></div></fieldset>}</>}
     {existing&&<div className="issue-summary"><b>{categories[existing.category]}{existing.paymentMethod&&` · ${paymentMethods[existing.paymentMethod]||existing.paymentMethod}`}{existing.paymentArea&&` · ${paymentAreas[existing.paymentMethod||'']?.find(option=>option.value===existing.paymentArea)?.label||existing.paymentArea}`}</b><p>{existing.issue}</p></div>}
+    {existing&&<section className="case-audit-history"><h3>Change history</h3>{history.length?history.slice(0,8).map(item=><article key={item.id}><b>{item.action.replaceAll('_',' ')}</b><small>{item.changedBy} · {new Date(item.createdAt).toLocaleString('en-GB')}</small><p>{Object.keys(item.changes).join(', ')}</p></article>):<p className="muted">No recorded changes yet.</p>}</section>}
     <label>Action<textarea rows={3} value={form.updateNote} onChange={event=>set('updateNote',event.target.value)} placeholder="Action taken or the latest investigation step"/></label>
     <label>Response<textarea rows={4} value={form.response} onChange={event=>set('response',event.target.value)} placeholder="Latest response or action taken"/></label>
     {existing?<label>PIC<select required value={form.picUserId} onChange={event=>set('picUserId',event.target.value)}>{members.map(member=><option key={member.id} value={member.id}>{member.name}</option>)}</select></label>:<label>PIC<input value={loggedInUser.name} readOnly/><small>Automatically assigned from the signed-in user.</small></label>}
     <div className="grid2"><label>ACR ticket (optional)<input value={form.acrTicket} onChange={event=>set('acrTicket',event.target.value)} placeholder="e.g. ACR-12345"/></label><label>Status<select value={form.status} onChange={event=>set('status',event.target.value)}>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label></div>
-    {error&&<p className="error">{error}</p>}<div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary" disabled={busy||(!existing&&!form.merchantId)}>{existing?'Save changes':'Create case'}</button></div>
+    {error&&<p className="error">{error}</p>}<div className="actions"><button type="button" onClick={close}>Cancel</button><button className="primary" disabled={busy||(!existing&&!form.issue.trim())||(!existing&&form.source==='MERCHANT'&&!form.merchantId)}>{existing?'Save changes':'Create case'}</button></div>
   </form></div>;
 }
 
@@ -115,13 +120,13 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
   const overdue=cases.filter(item=>item.status!=='SOLVED'&&Date.now()-new Date(item.updatedAt).getTime()>=2*86400000).length;
   function exportCases(){
     downloadCsv('case-report',['Merchant name','Merchant code','Issue','Category','Payment method','Specific area','Action','Response','PIC','PIC email','ACR ticket','Status','Created by','Created at','Last updated'],cases.map(item=>[
-      item.merchant.name,item.merchant.code,item.issue,categories[item.category]||item.category,paymentMethods[item.paymentMethod||'']||'',paymentAreas[item.paymentMethod||'']?.find(option=>option.value===item.paymentArea)?.label||'',item.updateNote||'',item.response||'',
+      caseOwner(item),item.merchant?.code||'',item.issue,categories[item.category]||item.category,paymentMethods[item.paymentMethod||'']||'',paymentAreas[item.paymentMethod||'']?.find(option=>option.value===item.paymentArea)?.label||'',item.updateNote||'',item.response||'',
       item.pic.name,item.pic.email,item.acrTicket||'',statuses[item.status]||item.status,item.createdBy,
       new Date(item.createdAt).toLocaleString('en-GB'),new Date(item.updatedAt).toLocaleString('en-GB')
     ]));
   }
   async function deleteCase(item:CaseItem){
-    if(!window.confirm(`Delete the case for ${item.merchant.name}?`))return;
+    if(!window.confirm(`Delete the case for ${caseOwner(item)}?`))return;
     await api(`/cases/${item.id}`,{method:'DELETE'});
     await load();
   }
@@ -148,7 +153,7 @@ export default function CasesPage({merchants,members}:{merchants:Merchant[];memb
       <div className="table-scroll"><table className="case-table responsive-table">
         <thead><tr><th>Merchant name</th><th>Category</th><th>Action</th><th>Response</th><th>PIC</th><th>Created date</th><th>Updated date</th><th>Status</th><th></th></tr></thead>
         <tbody>{pagedCases.map(item=><tr key={item.id}>
-          <td data-label="Merchant"><b>{item.merchant.name}</b></td>
+          <td data-label="Merchant"><button className="case-detail-link" onClick={()=>setEditing(item)}>{caseOwner(item)}</button>{item.source==='INTERNAL'&&<small className="case-payment-detail">Internal case</small>}</td>
           <td data-label="Category"><span>{categories[item.category]}</span>{item.paymentMethod&&<small className="case-payment-detail">{paymentMethods[item.paymentMethod]||item.paymentMethod} · {paymentAreas[item.paymentMethod]?.find(option=>option.value===item.paymentArea)?.label||item.paymentArea}</small>}</td>
           <td data-label="Action"><span className="case-update">{item.updateNote||'No action yet'}</span></td>
           <td data-label="Response"><span className="case-response">{item.response||'No response yet'}</span></td>

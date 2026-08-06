@@ -1,0 +1,2 @@
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+@Entity('merchant_history') export class MerchantHistory { @PrimaryGeneratedColumn('uuid') id:string; @Column({type:'uuid'}) merchantId:string; @Column() merchantName:string; @Column() action:string; @Column() changedBy:string; @Column({type:'jsonb',default:()=>"'{}'::jsonb"}) changes:Record<string,{from:unknown;to:unknown}>; @CreateDateColumn() createdAt:Date; }
